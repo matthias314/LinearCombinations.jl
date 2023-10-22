@@ -314,12 +314,9 @@ end
 one(::Type{Linear{T,R}}) where {T,R} = Linear(one(T) => one(R))
 one(::T) where T <: Linear = one(T)
 
-# TODO: add standard keyword arguments to *
-# also: can we use is_filtered?
-
 *(x::Linear{T}, y::T; kw...) where T = mul(x, y; kw...)
 *(x::T, y::Linear{T}; kw...) where T = mul(x, y; kw...)
-*(x::Linear, y::Linear; kw...) = mul(x, y; kw...)
+*(x::Linear...; kw...) = mul(x...; kw...)
 
 function ^(a::Linear, n::Integer)
     if n > 0
