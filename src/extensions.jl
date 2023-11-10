@@ -26,7 +26,13 @@ function addtraits!(ex, def::Dict, traits)
 end
 
 macro linear_kw(ex)
-    def = splitdef(ex)
+    # skip macro calls
+    ex1 = ex
+    while Meta.isexpr(ex1, :macrocall)
+        ex1 = ex1.args[end]
+    end
+
+    def = splitdef(ex1)
     f = def[:name]
     if isexpr(f, :(::))
         FT = f.args[2]
@@ -49,7 +55,7 @@ macro linear_kw(ex)
         t in kwnames && push!(traits, t)
     end
     :addto in kwnames && :coeff in kwnames && push!(traits, :addto_coeff)
-    addtraits!(traitex, def, traits)
+    isempty(traits) || addtraits!(traitex, def, traits)
     esc(:($traitex; $ex))
 end
 
