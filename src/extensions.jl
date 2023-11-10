@@ -4,7 +4,7 @@
 
 # macros for linear extension
 
-export @linear, @linear_kw
+export @linear, @linear_kw, keeps_filtered
 
 using MacroTools
 
@@ -57,27 +57,34 @@ linear_extension_coeff_type(f, types...) = _coefftype(return_type(f, types...))
 
 linear_extension_term_type(f, ::Type{T}) where T = _termtype(return_type(f, T))
 
+function linear_extension_type(f, ::Type{L}, ::Type{R}) where {L<:AbstractLinear,R}
+    LU = return_type(f, _termtype(L))
+    U = _termtype(LU)
+    L <: Linear1 && (LU <: Linear1 || !(LU <: AbstractLinear)) ? Linear1{U,R} : Linear{U,R}
+end
+
 macro linear(f)
     F = esc(f)
     quote
-        function $F(a::Linear{T,R};
+        function $F(a::L;
                 coefftype = promote_type(R, linear_extension_coeff_type($F, T)),
-                addto = zero(Linear{linear_extension_term_type($F, T), coefftype}),
+                # addto = zero(Linear{linear_extension_term_type($F, T), coefftype}),
+                addto = zero(linear_extension_type($F, L, coefftype)),
                 coeff = ONE,
-		sizehint = true,
-		kw...) where {T,R}
+                sizehint = true,
+                kw...) where {T,R,L<:AbstractLinear{T,R}}
             if iszero(coeff)
                 ;
-            elseif return_type($F, T) <: Linear
-	        has_ac = has_addto_coeff($F, T)
+            elseif return_type($F, T) <: AbstractLinear
+                has_ac = has_addto_coeff($F, T)
                 # has_ac || println($F, ": ", T)
-		new_kw = kw
-		if has_isfiltered($F, T)
-		    new_kw = (; is_filtered = true, new_kw...)
-		end
-		if has_sizehint($F, T)
-		    new_kw = (; sizehint, new_kw...)
-		end
+                new_kw = kw
+                if has_isfiltered($F, T)
+                    new_kw = (; is_filtered = true, new_kw...)
+                end
+                if has_sizehint($F, T)
+                    new_kw = (; sizehint, new_kw...)
+                end
                 for (x, c) in a
                     if has_ac
                         $F(x; addto, coeff = coeff*c, new_kw...)
@@ -96,7 +103,17 @@ macro linear(f)
     end
 end
 
+#
+# linear extension of ComposedFunctionOuterKw
+#
+
+@linear f::ComposedFunctionOuterKw
+
+hastrait(f::ComposedFunctionOuterKw, trait::Val, types...) = hastrait(f.outer, trait, types...)
+
+#
 # new type for linear extension
+#
 
 export LinearExtension
 
@@ -125,7 +142,7 @@ deg(g::LinearExtension) = deg(g.f)
 
 # linear extension of function evaluation
 
-(a::Linear)(x...; kw...) = multilin(Eval, a, x...; kw...)
+(a::AbstractLinear)(x...; kw...) = multilin(Eval, a, x...; kw...)
 
 
 #
@@ -158,47 +175,47 @@ macro ncallkw(N::Int, f, kw, args...)
             Base.Cartesian.@ncall($N, $f, $(args...))
         else
             Base.Cartesian.@ncall($N, Core.kwcall, $kw, $f, $(args...))
-	end
+        end
     end)
 end
 
 _length(x) = 1
-_length(a::Linear) = length(a)
+_length(a::AbstractLinear) = length(a)
 
 @generated function multilin(f::F, a...;
         coefftype = multilin_coeff_type(f, a),
         addto = zero(Linear{multilin_term_type(f, a), coefftype}),
             # TODO: we want coefftype::Type{R} and use "R" here, see julia #49367
-	coeff = ONE,
-	is_filtered = false,
-	sizehint = true,
-	kw...) where F
+        coeff = ONE,
+        is_filtered = false,
+        sizehint = true,
+        kw...) where F
     N = length(a)
     TS = map(_termtype, a)
     quote
         is_filtered || all(linear_filter, a) || return addto
         has_ac = has_addto_coeff(f, $TS...)
         new_kw = kw
-	if has_isfiltered(f, $TS...)
-	    new_kw = (; is_filtered = true, new_kw...)
-	end
-	if has_sizehint(f, $TS...)
-	    new_kw = (; sizehint, new_kw...)
-	elseif sizehint # && !(return_type(f, $TS...) <: Linear)
-	    l = prod(_length, a; init = 1)
-	    sizehint!(addto, length(addto)+l)
-	end
+        if has_isfiltered(f, $TS...)
+            new_kw = (; is_filtered = true, new_kw...)
+        end
+        if has_sizehint(f, $TS...)
+            new_kw = (; sizehint, new_kw...)
+        elseif sizehint # && !(return_type(f, $TS...) <: AbstractLinear)
+            l = prod(_length, a; init = 1)
+            sizehint!(addto, length(addto)+l)
+        end
         @nexprs(1, i -> cc_{$N+i} = coeff)  # initialize cc_{N+1}
-        @nloops($N, xc, i -> a[i] isa Linear ? a[i] : ((a[i], ONE),), i -> begin
+        @nloops($N, xc, i -> a[i] isa AbstractLinear ? a[i] : ((a[i], ONE),), i -> begin
             x_i, c_i = xc_i
             cc_i = c_i*cc_{i+1}
         end, begin
-	    if has_ac || return_type(f, $TS...) <: Linear
-	        # has_ac || println("$f: ", $TS)
-	        @ncallkw($N, f, (addto, coeff = cc_1, new_kw...), x)
-	    else
-	        addmul!(addto, @ncallkw($N, f, new_kw, x), cc_1; is_filtered = keeps_filtered(f, $TS...))
-	    end
+            if has_ac # || return_type(f, $TS...) <: AbstractLinear
+                # has_ac || println("$f: ", $TS)
+                @ncallkw($N, f, (addto, coeff = cc_1, new_kw...), x)
+            else
+                addmul!(addto, @ncallkw($N, f, new_kw, x), cc_1; is_filtered = keeps_filtered(f, $TS...))
+            end
         end)
         addto
     end
@@ -212,8 +229,8 @@ macro multilinear(f, f0 = f)
     else
         FT = isexpr(f, :(::)) ? esc(f.args[2]) : :(typeof($F))
         traits = quote
-	    $(@__MODULE__).hastrait(::$FT, ::Val, types...) = true
-	end
+            $(@__MODULE__).hastrait(::$FT, ::Val, types...) = true
+        end
     end
     # TODO: does @propagate_inbounds make sense?
     quote
@@ -246,7 +263,7 @@ macro multilinear_noesc(f, f0 = f)
             N = length(a)
             TT = map(_termtype, a)
             quote
-	        # TT = $TT
+                # TT = $TT
                 is_filtered || all($linear_filter, a) || return addto
                 has_ac = $has_addto_coeff($$F0, $TT...)
                 new_kw = kw
@@ -255,7 +272,7 @@ macro multilinear_noesc(f, f0 = f)
                 end
                 if $has_sizehint($$F0, $TT...)
                     new_kw = (; sizehint, new_kw...)
-                elseif sizehint # && !(return_type(f, $TT...) <: Linear)
+                elseif sizehint # && !(return_type(f, $TT...) <: AbstractLinear)
                     l = prod($_length, a; init = 1)
                     sizehint!(addto, length(addto)+l)
                 end
@@ -264,7 +281,7 @@ macro multilinear_noesc(f, f0 = f)
                     x_i, c_i = xc_i
                     cc_i = c_i*cc_{i+1}
                 end, begin
-                    if has_ac   # || return_type(f, $TT...) <: Linear   # for testing
+                    if has_ac   # || return_type(f, $TT...) <: AbstractLinear   # for testing
                         $$(@__MODULE__).@ncallkw($N, $$F0, (addto, coeff = cc_1, new_kw...), x)
                     else
                         $addmul!(addto, $$(@__MODULE__).@ncallkw($N, $$F0, new_kw, x), cc_1; is_filtered = $keeps_filtered($$F0, $TT...))
@@ -273,7 +290,7 @@ macro multilinear_noesc(f, f0 = f)
                 addto
             end
         end
-        
+
         $traits
     end
 end
@@ -305,20 +322,20 @@ deg(g::MultilinearExtension) = deg(g.f)
 
 const mul = MultilinearExtension(*)
 
-function isone(a::Linear{T}) where T
+function isone(a::AbstractLinear{T}) where T
     length(a) == 1 || return false
     x, c = first(a)
     isone(c) && isone(x)
 end
 
-one(::Type{Linear{T,R}}) where {T,R} = Linear(one(T) => one(R))
-one(::T) where T <: Linear = one(T)
+one(::Type{L}) where {T,R,L<:AbstractLinear{T,R}} = L(one(T) => one(R))
+one(::T) where T <: AbstractLinear = one(T)
 
-*(x::Linear{T}, y::T; kw...) where T = mul(x, y; kw...)
-*(x::T, y::Linear{T}; kw...) where T = mul(x, y; kw...)
-*(x::Linear...; kw...) = mul(x...; kw...)
+*(x::AbstractLinear{T}, y::T; kw...) where T = mul(x, y; kw...)
+*(x::T, y::AbstractLinear{T}; kw...) where T = mul(x, y; kw...)
+*(x::AbstractLinear...; kw...) = mul(x...; kw...)
 
-function ^(a::Linear, n::Integer)
+function ^(a::AbstractLinear, n::Integer)
     if n > 0
         # TODO: use square and multiply?
         b = a

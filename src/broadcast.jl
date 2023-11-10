@@ -16,10 +16,10 @@ macro linear_broadcastable(T)
     end
 end
 
-@linear_broadcastable Linear
+@linear_broadcastable AbstractLinear
 @linear_broadcastable Sign
 
-Base.axes(::Linear) = nothing
+Base.axes(::AbstractLinear) = nothing
 
 BroadcastStyle(::DefaultArrayStyle{0}, style::LinearStyle) = style
 # needed for scalars
@@ -62,64 +62,62 @@ end
 
 # copyto!
 
-function copyto!(a::Linear, bc::Broadcasted{LinearStyle, Nothing, typeof(identity)})
+function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(identity)})
     bca1 = bc.args[1]
     if a !== bca1
-        empty!(a)
+        zero!(a)
         _copyto!(a, bca1, ONE)
     end
     a
 end
 
-function copyto!(a::Linear, bc::Broadcasted{LinearStyle, Nothing, typeof(*)})
+function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(*)})
     bca1, bca2 = bc.args
     if a === bca1
         mul!(bca1, bca2)
     else
-        empty!(a)
+        zero!(a)
         _copyto!(a, bca2, bca1)
         # TODO: we assume that bca1 is the scalar
     end
 end
 
-function copyto!(a::Linear, bc::Broadcasted{LinearStyle, Nothing, typeof(+)})
+function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(+)})
     bca1, bca2 = bc.args
     if a !== bca1
-        empty!(a)
+        zero!(a)
         _copyto!(a, bca1, ONE)
     end
     _copyto!(a, bca2, ONE)
 end
 
-function copyto!(a::Linear, bc::Broadcasted{LinearStyle, Nothing, typeof(-)})
+function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(-)})
     bca1, bca2 = bc.args
     if a !== bca1
-        empty!(a)
+        zero!(a)
         _copyto!(a, bca1, ONE)
     end
     _copyto!(a, bca2, -ONE)
 end
 
-function _copyto!(a::Linear, b::Linear, c::Sign)
+function _copyto!(a::AbstractLinear, b::AbstractLinear, c::Sign)
     isone(c) ? add!(a, b) : sub!(a, b)
 end
 
-function _copyto!(a::Linear, b::Linear, c)
+function _copyto!(a::AbstractLinear, b::AbstractLinear, c)
     addmul!(a, b, c)
 end
 
-function _copyto!(a::Linear{T}, x::T, c) where T
-    # addcoeff!(a, x, c)
+function _copyto!(a::AbstractLinear{T}, x::T, c) where T
     addmul!(a, x, c)
 end
 
 # This is for types T that are converted to Array{T, 0}
-function _copyto!(a::Linear{T}, x::Array{T, 0}, c) where T
-    # addcoeff!(a, x[], c)
+function _copyto!(a::AbstractLinear{T}, x::Array{T, 0}, c) where T
     addmul!(a, x[], c)
 end
 
-function _copyto!(a::Linear, bc::Broadcasted{LinearStyle, Nothing, typeof(*)}, c)
+function _copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(*)}, c)
     bca1, bca2 = bc.args
     # TODO: this assumes that bca1 is the scalar
     _copyto!(a, bca2, c * bca1)
@@ -127,23 +125,23 @@ function _copyto!(a::Linear, bc::Broadcasted{LinearStyle, Nothing, typeof(*)}, c
     # _copyto!(a, bca2, c * (bca1 isa Broadcasted ? copy(bca1) : bca1))
 end
 
-function _copyto!(a::Linear, bc::Broadcasted{LinearStyle, Nothing, typeof(+), <:Tuple{Any}}, c)
+function _copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(+), <:Tuple{Any}}, c)
     bca = bc.args
     _copyto!(a, bca[1], c)
 end
 
-function _copyto!(a::Linear, bc::Broadcasted{LinearStyle, Nothing, typeof(+), <:Tuple{Any, Any}}, c)
+function _copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(+), <:Tuple{Any, Any}}, c)
     bca1, bca2 = bc.args
     _copyto!(a, bca1, c)
     _copyto!(a, bca2, c)
 end
 
-function _copyto!(a::Linear, bc::Broadcasted{LinearStyle, Nothing, typeof(-), <:Tuple{Any}}, c)
+function _copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(-), <:Tuple{Any}}, c)
     bca = bc.args
     _copyto!(a, bca[1], -c)
 end
 
-function _copyto!(a::Linear, bc::Broadcasted{LinearStyle, Nothing, typeof(-), <:Tuple{Any, Any}}, c)
+function _copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(-), <:Tuple{Any, Any}}, c)
     bca1, bca2 = bc.args
     _copyto!(a, bca1, c)
     _copyto!(a, bca2, -c)

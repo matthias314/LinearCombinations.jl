@@ -85,8 +85,6 @@ end
     @test sizehint!(a, 2*length(a)) == a
     
     aa = copy(a)
-    @test iszero(@inferred(empty!(aa)))
-    aa = copy(a)
     @test iszero(@inferred(zero!(aa)))
     
     a = Linear('a'+k => k for k in 1:8)
@@ -448,7 +446,7 @@ end
 @testset "regroup tensor" begin
     rg, rg_inv = regroup_inv(:((1,(2,3))), :(3,(1,2)))
     t = Tensor('x', Tensor("y", [1,2]))
-    a = Linear(t => ONE)
+    a = Linear(t => 1)
     @inferred rg(t)
     @test rg_inv(rg(t)) == a
     @inferred rg(a)
@@ -483,7 +481,7 @@ end
     @test b == swap(a)
     
     t = Tensor('x',"y")
-    b = zero(Linear{Tensor{Tuple{String,Char}},Float64})
+    b = zero(Linear1{Tensor{Tuple{String,Char}},Float64})
     swap(t; addto = b)
     c = swap(t; coefftype = Float64)
     @test b == c

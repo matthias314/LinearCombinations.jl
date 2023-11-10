@@ -45,6 +45,7 @@ struct Sign
 end
 
 const ONE = Sign(false)
+const MINUSONE = Sign(true)
 
 one(::Type{Sign}) = ONE
 one(::Sign) = one(Sign)
@@ -147,12 +148,18 @@ Hashed{T}(x) where T = Hashed{T}(x, hash(x))
 Hashed{T}(x::Hashed{T}) where T = x
 Hashed{T}(x::Hashed) where T = Hashed{T}(x.var, x.hash)
 
+convert(::Type{Hashed{T}}, x::Hashed) where T = Hashed{T}(x)
+
 ==(x::Hashed, y::Hashed) = x.var == y.var
 
 hash(x::Hashed) = x.hash
 hash(x::Hashed, h::UInt) = hash(x.var, h)
 
+unhash(x) = x
 unhash(x::Hashed) = x.var
+
+unhash_type(::Type{T}) where T = T
+unhash_type(::Type{Hashed{T}}) where T = T
 
 show(io::IO, x::Hashed) = print(io, x.var)
 

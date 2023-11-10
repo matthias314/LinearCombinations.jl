@@ -115,7 +115,7 @@ end
 
 function regroup_tensor_type(rg::Regroup, ::Type{T}, coefftype) where T <: Tensor
     U = regroup_eval_expr(rg, _getindex, build_tensor_type, T)
-    Linear{U,coefftype}
+    Linear1{U,coefftype}
 end
 
 # @assume_effects allows to omit the sign computation for has_char2 coefficients
@@ -134,7 +134,7 @@ end
         addto = zero(regroup_tensor_type(rg, T, coefftype)),
         coeff = ONE,
         is_filtered::Bool = false) where T <: Tensor
-    addcoeff!(addto, regroup_eval_expr(rg, _getindex, Tensor, x),
+    addmul!(addto, regroup_eval_expr(rg, _getindex, Tensor, x),
             signed(regroup_tensor_signexp(rg, deg ∘ _getindex, x), coeff); is_filtered)
         # @inbounds has no effect for building the tensor or computing the sign
         # because we access tuples at (after code generation) fixed indices

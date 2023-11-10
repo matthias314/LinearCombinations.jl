@@ -48,7 +48,7 @@ deg(t::Tensor) = sum0(deg, factors(t))
 deg_return_type_tensor(R, T...) = promote_type(R, map(Fix1(return_type, deg), T)...)
 
 return_type(::typeof(deg), ::Type{Tensor{T}}) where T <: Tuple =
-    deg_return_type_tensor(Sign, T.parameters...)
+    deg_return_type_tensor(Int, T.parameters...)
 
 linear_filter(t::Tensor) = all(linear_filter, t)
 
@@ -228,7 +228,7 @@ end
 @linear_kw function (g::TensorMap)(t::Tensor;
         coefftype = begin
             RR = ntuple(i -> linear_extension_coeff_type(g[i], typeof(t[i])), length(g))
-	    promote_type(Sign, RR...)
+            promote_type(Sign, RR...)
         end,
         addto = begin
             TT = ntuple(i -> linear_extension_term_type(g[i], typeof(t[i])), length(g))
@@ -242,20 +242,20 @@ end
     if has_char2(R)
         # TODO: change from R to ZZ2
         gt = ntuple(n) do i
-	    T = typeof(t[i])
-	    if has_coefftype(g[i], T)
+            T = typeof(t[i])
+            if has_coefftype(g[i], T)
                 # g[i](t[i]; coefftype = promote_type(linear_extension_coeff_type(g[i], T), ZZ2))
                 g[i](t[i]; coefftype = R)
-	    else
-	        g[i](t[i])
-	    end
-	end
+            else
+                g[i](t[i])
+            end
+        end
         c = coeff
     else
         gt = ntuple(i -> g[i](t[i]), n)
         ds = g.degsums
         m = sum0(ntuple(i -> ds[i]*deg(t[i]), n))
-	c = signed(m, coeff)
+        c = signed(m, coeff)
     end
     is_filtered = all(ntuple(i -> gt[i] isa Linear || keeps_filtered(g[i], typeof(t[i])), n))
     tensor(gt...; addto, coeff = c, is_filtered, sizehint, kw...)
@@ -295,7 +295,7 @@ function tensor_diff(addto, coeff, e, t1, t0, x, dx)
     tensor_diff(addto, coeff, e+deg(x), (t1..., x), t0)
 end
 
-function tensor_diff(addto, coeff, e, t1, t0, x, dx::Linear)
+function tensor_diff(addto, coeff, e, t1, t0, x, dx::AbstractLinear)
     for (y, c) in dx
         addmul!(addto, Tensor((t1..., y, t0...)), signed(e, coeff*c))
     end
