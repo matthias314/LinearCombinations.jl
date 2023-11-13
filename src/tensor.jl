@@ -81,7 +81,7 @@ function *(t1::Tensor{<:Tuple{Vararg{Any,n}}}, t2::Tensor{<:Tuple{Vararg{Any,n}}
         end,
         addto = begin
             TT = mul_rt_tensor(factors(t1), factors(t2))
-            zero(Linear{Tensor{Tuple{map(_termtype, TT)...}},coefftype})
+            zero(Linear{Tensor{Tuple{map(_termtype, TT)...}},unval(coefftype)})
         end,
         coeff = ONE,
         is_filtered = false) where n
@@ -107,7 +107,7 @@ one(::T) where T <: Tensor = one(T)
             TT = map(typeof, factors(t))
             promote_type(Sign, map(Fix1(linear_extension_coeff_type, coprod), TT)...)
         end,
-        addto = zero(Linear{Tensor{Tuple{T,T}},coefftype}),
+        addto = zero(Linear{Tensor{Tuple{T,T}},unval(coefftype)}),
         coeff = ONE,
         is_filtered = false) where T <: Tensor
     n = length(t)
@@ -232,7 +232,7 @@ end
         end,
         addto = begin
             TT = ntuple(i -> linear_extension_term_type(g[i], typeof(t[i])), length(g))
-            zero(Linear{Tensor{Tuple{TT...}},coefftype})
+            zero(Linear{Tensor{Tuple{TT...}},unval(coefftype)})
         end,
         coeff = ONE, is_filtered = false, sizehint = true, kw...)
     n = length(g)
@@ -244,8 +244,8 @@ end
         gt = ntuple(n) do i
             T = typeof(t[i])
             if has_coefftype(g[i], T)
-                # g[i](t[i]; coefftype = promote_type(linear_extension_coeff_type(g[i], T), ZZ2))
-                g[i](t[i]; coefftype = R)
+                # g[i](t[i]; coefftype = Val(promote_type(linear_extension_coeff_type(g[i], T), ZZ2)))
+                g[i](t[i]; coefftype = Val(R))
             else
                 g[i](t[i])
             end
@@ -287,7 +287,7 @@ end
 
 tensor_diff(addto, coeff, e, t1, t0::Tuple{}) = nothing
 tensor_diff(addto, coeff, e, t1, t0) =
-    tensor_diff(addto, coeff, e, t1, t0[2:end], t0[1], diff(t0[1]; coefftype = coefftype(addto)))
+    tensor_diff(addto, coeff, e, t1, t0[2:end], t0[1], diff(t0[1]; coefftype = Val(coefftype(addto))))
 
 function tensor_diff(addto, coeff, e, t1, t0, x, dx)
     t = Tensor((t1..., dx, t0...))

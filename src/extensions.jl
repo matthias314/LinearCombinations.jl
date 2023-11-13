@@ -75,7 +75,7 @@ macro linear(f)
         function $F(a::L;
                 coefftype = promote_type(R, linear_extension_coeff_type($F, T)),
                 # addto = zero(Linear{linear_extension_term_type($F, T), coefftype}),
-                addto = zero(linear_extension_type($F, L, coefftype)),
+                addto = zero(linear_extension_type($F, L, unval(coefftype))),
                 coeff = ONE,
                 sizehint = true,
                 kw...) where {T,R,L<:AbstractLinear{T,R}}
@@ -190,7 +190,7 @@ _length(a::AbstractLinear) = length(a)
 
 @generated function multilin(f::F, a...;
         coefftype = multilin_coeff_type(f, a),
-        addto = zero(Linear{multilin_term_type(f, a), coefftype}),
+        addto = zero(Linear{multilin_term_type(f, a), unval(coefftype)}),
             # TODO: we want coefftype::Type{R} and use "R" here, see julia #49367
         coeff = ONE,
         is_filtered = false,
@@ -260,7 +260,7 @@ macro multilinear_noesc(f, f0 = f)
         # TODO: does @propagate_inbounds make sense?
         @propagate_inbounds @generated function $F($(esc(:a))...;
                 coefftype = multilin_coeff_type($F0, a),
-                addto = zero(Linear{multilin_term_type($F0, a), coefftype}),
+                addto = zero(Linear{multilin_term_type($F0, a), unval(coefftype)}),
                     # TODO: we want coefftype::Type{R} and use "R" here, see julia #49367
                 coeff = ONE,
                 is_filtered = false,

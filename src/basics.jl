@@ -23,6 +23,10 @@ end
 # function evaluation
 Eval(f, x...; kw...) = f(x...; kw...)
 
+# unwrapping Val
+unval(x) = x
+unval(::Val{x}) where x = x
+
 struct ComposedFunctionOuterKw{O,I}
     outer::O
     inner::I

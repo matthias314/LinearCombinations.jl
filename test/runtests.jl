@@ -1,6 +1,6 @@
 using LinearCombinations, Test
 
-using LinearCombinations: Sign, Zero, ONE
+using LinearCombinations: Sign, Zero, ONE, unval
 
 @testset "Sign" begin
     s0::Sign = 1
@@ -261,7 +261,7 @@ f(x) = x * x
 
 function g(x::Char;
         coefftype = Float64,
-        addto = zero(Linear{Char,coefftype}),
+        addto = zero(Linear{Char,unval(coefftype)}),
         coeff = ONE,
         is_filtered = false)
     addmul!(addto, uppercase(x), 2*coeff)
@@ -277,8 +277,7 @@ end
         @test typeof(c) == Linear{String,R}
         @test c == b
 
-        # c = @inferred f(a; coefftype = Int16)
-        c = f(a; coefftype = Int16)
+        c = @inferred f(a; coefftype = Val(Int16))
         @test typeof(c) == Linear{String,Int16}
         @test c == b
 
@@ -472,7 +471,7 @@ end
 end
 
 @testset "regroup tensor kw args" begin
-    a = tensor('x', "y"; coefftype = Int)
+    a = @inferred tensor('x', "y"; coefftype = Val(Int))
     b = @inferred swap(a; coeff = 2)
     @test b == 2*swap(a)
     
@@ -483,7 +482,7 @@ end
     t = Tensor('x',"y")
     b = zero(Linear1{Tensor{Tuple{String,Char}},Float64})
     swap(t; addto = b)
-    c = swap(t; coefftype = Float64)
+    c = @inferred swap(t; coefftype = Val(Float64))
     @test b == c
     @test typeof(b) == typeof(c)
 end
@@ -506,7 +505,7 @@ g0(x) = Linear(f0(x) => 2.0)
 @testset "tensormap deg 0 0" begin
     h = tensormap()
     t = Tensor()
-    a = tensor(; coefftype = Int32)
+    a = @inferred tensor(; coefftype = Val(Int32))
     @test h(t) == Linear(t => ONE)
     @test h(a; coeff = 3) == 3*a
     
@@ -644,7 +643,7 @@ deg(::typeof(g1)) = 1
 @testset "tensormap deg 1 0" begin
     h = tensormap()
     t = Tensor()
-    a = tensor(; coefftype = Int32)
+    a = @inferred tensor(; coefftype = Val(Int32))
     @test h(t) == Linear(t => ONE)
     @test h(a; coeff = 3) == 3*a
     
@@ -776,7 +775,7 @@ end
 @testset "tensormap deg 1 1" begin
     h = tensormap()
     t = Tensor()
-    a = tensor(; coefftype = Int32)
+    a = @inferred tensor(; coefftype = Val(Int32))
     @test h(t) == Linear(t => ONE)
     @test h(a; coeff = 3) == 3*a
     
@@ -965,7 +964,7 @@ import LinearCombinations: diff
 
 function diff(x::String;
         coefftype = Int,
-        addto = zero(Linear{String,coefftype}),
+        addto = zero(Linear{String,unval(coefftype)}),
         coeff = 1,
         is_filtered = false) 
     if x[1] != 'd'
@@ -996,18 +995,18 @@ end
     b = Linear("yy" => 1, "yyy" => -3)
     c = Linear("z" => 5, "zzz" => -4)
     
-    x = tensor(a, b, c; coefftype = Float64)
+    x = @inferred tensor(a, b, c; coefftype = Val(Float64))
     dx = @inferred diff(x)
     ddx = @inferred diff(dx)
     @test iszero(ddx)
 
-    x = tensor(a, b, c; coefftype = Float64)  # Int16 doesn't work!
+    x = @inferred tensor(a, b, c; coefftype = Val(Float64))  # Int16 doesn't work!
     dx = @inferred diff(x; coeff = -2)
     @test dx isa Linear{Tensor{NTuple{3,String}},Float64}
     @test dx == -2*diff(x)
     
     for n in 0:8
-        a = tensor((string(x) for x in 'a':'a'+n-1)...; coefftype = Int)
+        a = @inferred tensor((string(x) for x in 'a':'a'+n-1)...; coefftype = Val(Int))
         b = @inferred diff(a)
         @test iszero(diff(diff(b)))
     end

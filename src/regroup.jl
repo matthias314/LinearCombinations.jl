@@ -131,7 +131,7 @@ end
 
 @linear_kw function (rg::Regroup)(x::T;
         coefftype = regroup_tensor_coeff_type(map(typeof, factors(x))...),
-        addto = zero(regroup_tensor_type(rg, T, coefftype)),
+        addto = zero(regroup_tensor_type(rg, T, unval(coefftype))),
         coeff = ONE,
         is_filtered::Bool = false) where T <: Tensor
     addmul!(addto, regroup_eval_expr(rg, _getindex, Tensor, x),
