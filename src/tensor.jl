@@ -243,7 +243,7 @@ end
         # TODO: change from R to ZZ2
         gt = ntuple(n) do i
             T = typeof(t[i])
-            if has_coefftype(g[i], T)
+            if has_char2(R) && has_coefftype(g[i], T)
                 # g[i](t[i]; coefftype = Val(promote_type(linear_extension_coeff_type(g[i], T), ZZ2)))
                 g[i](t[i]; coefftype = Val(R))
             else
@@ -285,21 +285,29 @@ function diff_coeff_type(T...)
     promote_type(Int, RD..., RS...)
 end
 
-tensor_diff(addto, coeff, e, t1, t0::Tuple{}) = nothing
-tensor_diff(addto, coeff, e, t1, t0) =
-    tensor_diff(addto, coeff, e, t1, t0[2:end], t0[1], diff(t0[1]; coefftype = Val(coefftype(addto))))
+tensor_diff(addto::AbstractLinear{T,R}, coeff, e, t1, t0::Tuple{}) where {T,R} = nothing
+
+function tensor_diff(addto::AbstractLinear{T,R}, coeff, e, t1, t0) where {T,R}
+    if has_char2(R) && has_coefftype(diff, typeof(t0[1]))
+        dx = diff(t0[1]; coefftype = Val(R))
+    else
+        dx = diff(t0[1])
+    end
+    tensor_diff(addto, coeff, e, t1, t0[2:end], t0[1], dx)
+end
 
 function tensor_diff(addto, coeff, e, t1, t0, x, dx)
-    t = Tensor((t1..., dx, t0...))
-    linear_filter(t) && addmul!(addto, t, signed(e, coeff))
-    tensor_diff(addto, coeff, e+deg(x), (t1..., x), t0)
+    linear_filter(dx) && addmul!(addto, Tensor((t1..., dx, t0...)), signed(e, coeff))
+    e = has_char2(coefftype(addto)) ? Zero() : e+deg(x)
+    tensor_diff(addto, coeff, e, (t1..., x), t0)
 end
 
 function tensor_diff(addto, coeff, e, t1, t0, x, dx::AbstractLinear)
     for (y, c) in dx
         addmul!(addto, Tensor((t1..., y, t0...)), signed(e, coeff*c))
     end
-    tensor_diff(addto, coeff, e+deg(x), (t1..., x), t0)
+    e = has_char2(coefftype(addto)) ? Zero() : e+deg(x)
+    tensor_diff(addto, coeff, e, (t1..., x), t0)
 end
 
 # TODO: use keeps_filtered?
