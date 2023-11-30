@@ -324,7 +324,10 @@ end
     addto
 end
 
-return_type(::typeof(diff), ::Type{T}) where T <: Tensor = Linear{T,diff_coeff_type(T.parameters[1].parameters...)}
+function return_type(::typeof(diff), ::Type{T}) where T <: Tensor
+    U = T isa UnionAll ? T.var.ub : T.parameters[1]
+    Linear{T,diff_coeff_type(U.parameters...)}
+end
 
 # linear_extension_coeff_type(::typeof(diff), ::Type{T}, ::Type{R}) where {T,R} = R
 linear_extension_term_type(::typeof(diff), ::Type{T}) where T = T

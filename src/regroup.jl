@@ -113,9 +113,10 @@ function regroup_tensor_coeff_type(T...)
     promote_type(Int, RS...)
 end
 
-function regroup_tensor_type(rg::Regroup, ::Type{T}, coefftype) where T <: Tensor
+function regroup_tensor_type(rg::Regroup, ::Type{T}, coefftype, ::Val{isunionall} = Val(false)) where {T<:Tensor,isunionall}
     U = regroup_eval_expr(rg, _getindex, build_tensor_type, T)
-    Linear1{U,coefftype}
+    W = isunionall ? Tensor{<:U.parameters[1]} : U
+    Linear1{W,coefftype}
 end
 
 # @assume_effects allows to omit the sign computation for has_char2 coefficients
@@ -140,5 +141,7 @@ end
         # because we access tuples at (after code generation) fixed indices
 end
 
-return_type(rg::Regroup, ::Type{T}) where T <: Tensor =
-    regroup_tensor_type(rg, T, regroup_tensor_coeff_type(T.parameters[1].parameters...))
+function return_type(rg::Regroup, ::Type{T}) where T <: Tensor
+    U = T isa UnionAll ? T.var.ub : T.parameters[1]
+    regroup_tensor_type(rg, Tensor{U}, regroup_tensor_coeff_type(U.parameters...), Val(true))
+end

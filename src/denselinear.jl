@@ -35,6 +35,8 @@ length(b::Basis) = length(b.list)
 
 @propagate_inbounds iterate(b::Basis, s...) = iterate(b.list, s...)
 
+in(b::Basis, x) = haskey(b.invlist, x)
+
 @propagate_inbounds tobasis(b::Basis, i) = b.list[i]
 
 toindex(b::Basis, x) = b.invlist[x]
