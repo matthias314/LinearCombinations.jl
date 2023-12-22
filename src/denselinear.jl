@@ -232,6 +232,15 @@ function mul!(a::DenseLinear{T,R}, c) where {T,R}
     a
 end
 
+function copyto!(a::DenseLinear, b::DenseLinear)
+    if a.b !== b.b
+        invoke(copyto!, Tuple{AbstractLinear,AbstractLinear}, a, b)
+    else
+        copyto!(a.v, b.v)
+    end
+    a
+end
+
 #
 # matrix representation
 #

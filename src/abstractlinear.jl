@@ -194,6 +194,12 @@ addmul(a::AbstractLinear, b, c) = addmul!(copy(a), b, c)
 add!(a::AbstractLinear, b::AbstractLinear) = modifylinear!(+, a, b)
 sub!(a::AbstractLinear, b::AbstractLinear) = modifylinear!(-, a, b)
 
+function copyto!(a::AbstractLinear, b)
+# b can be of type AbstractLinear or some term
+    a === b || add!(zero!(a), b)
+    a
+end
+
 function +(as::AbstractLinear...)
     T = promote_typejoin(map(termtype, as)...)
     R = promote_type(map(coefftype, as)...)

@@ -29,6 +29,9 @@ BroadcastStyle(::DefaultArrayStyle{0}, style::LinearStyle) = style
 instantiate(bc::Broadcasted{LinearStyle}) = bc
 # needed for copy, but not for copyto!
 
+copy(::Broadcasted{LinearStyle}) = error("broadcasting not implemented for this operation")
+# fallback with meaningful error message
+
 function copy(bc::Broadcasted{LinearStyle, Nothing, typeof(*)})
     bca1, bca2 = bc.args
     # TODO: we assume that bca1 is the scalar
@@ -62,13 +65,11 @@ end
 
 # copyto!
 
+copyto!(::AbstractLinear, ::Broadcasted{LinearStyle}) = error("broadcasting not implemented for this operation")
+# fallback with meaningful error message
+
 function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(identity)})
-    bca1 = bc.args[1]
-    if a !== bca1
-        zero!(a)
-        _copyto!(a, bca1, ONE)
-    end
-    a
+    copyto!(a, bc.args[1])
 end
 
 function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(*)})
@@ -84,19 +85,13 @@ end
 
 function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(+)})
     bca1, bca2 = bc.args
-    if a !== bca1
-        zero!(a)
-        _copyto!(a, bca1, ONE)
-    end
+    copyto!(a, bca1)
     _copyto!(a, bca2, ONE)
 end
 
 function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(-)})
     bca1, bca2 = bc.args
-    if a !== bca1
-        zero!(a)
-        _copyto!(a, bca1, ONE)
-    end
+    copyto!(a, bca1)
     _copyto!(a, bca2, -ONE)
 end
 
@@ -104,12 +99,8 @@ function _copyto!(a::AbstractLinear, b::AbstractLinear, c::Sign)
     isone(c) ? add!(a, b) : sub!(a, b)
 end
 
-function _copyto!(a::AbstractLinear, b::AbstractLinear, c)
+function _copyto!(a::AbstractLinear, b, c)
     addmul!(a, b, c)
-end
-
-function _copyto!(a::AbstractLinear{T}, x::T, c) where T
-    addmul!(a, x, c)
 end
 
 # This is for types T that are converted to Array{T, 0}
