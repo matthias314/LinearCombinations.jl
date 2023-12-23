@@ -154,18 +154,21 @@ linear_filter(x) = true
 
 modifycoeff!(op, a::AbstractLinear{T}, x, c) where T = modifycoeff!(op, a, Hashed{T}(x), c)
 
-addmul!(a::AbstractLinear, x::Hashed, c) = modifycoeff!(+, a, x, c isa Sign ? c*1 : c)
-# addmul!(a::AbstractLinear{T}, x::Hashed{U}, c) where {T,U<:T} = modifycoeff!(+, a, x, c)
-# addmul!(a::Linear{T}, @nospecialize(x::Hashed{U}), c) where {T,U<:T} = modifycoeff!(+, a, x, c)
+function modifylinear!(op::F, a::AbstractLinear, b::AbstractLinear, c = missing) where F
+# TODO: is this dangerous if a === b?
+    sizehint!(a, length(a) + length(b))
+    @inbounds for (x, d) in hashed_iter(b)
+        modifycoeff!(op, a, x, c === missing ? d : c*d)
+    end
+    a
+end
 
-@inline function addmul!(a::AbstractLinear{T}, x, c; is_filtered::Bool = false) where T
-# @inline function addmul!(a::Linear{T}, @nospecialize(x), c; is_filtered::Bool = false) where T
+@inline function addmul!(a::AbstractLinear, x, c; is_filtered::Bool = false)
     if !is_filtered
         linear_filter(x) || return a
         x, c = termcoeff(x => c)
     end
-    # modifycoeff!(+, a, Hashed{T}(x), c)
-    addmul!(a, Hashed{T}(x), c)
+    modifycoeff!(+, a, x, c)
 end
 
 add!(a::AbstractLinear, x) = addmul!(a, x, 1)
@@ -175,18 +178,13 @@ sub!(a::AbstractLinear, x) = addmul!(a, x, -1)
 sub!(a::AbstractLinear{T}, c::Number) where T = addmul!(a, one(T), -c)
 
 function addmul!(a::AbstractLinear, b::AbstractLinear, c; is_filtered::Bool = false)
-# we support "is_filtered" to be compatible with the other method above
+# we support "is_filtered" to be compatible with the method for terms
     iszero(c) || modifylinear!(+, a, b, c)
     a
 end
 
-function modifylinear!(op::F, a::AbstractLinear, b::AbstractLinear, c = missing) where F
-# TODO: is this dangerous if a === b?
-    sizehint!(a, length(a) + length(b))
-    @inbounds for (x, d) in hashed_iter(b)
-        modifycoeff!(op, a, x, c === missing ? d : c*d)
-    end
-    a
+function addmul!(a::AbstractLinear, b::AbstractLinear, c::Sign; is_filtered::Bool = false)
+    isone(c) ? add!(a, b) : sub!(a, b)
 end
 
 addmul(a::AbstractLinear, b, c) = addmul!(copy(a), b, c)
