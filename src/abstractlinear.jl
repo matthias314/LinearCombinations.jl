@@ -8,10 +8,11 @@ export linear_filter, AbstractLinear,
 
 abstract type AbstractLinear{T,R} end
 
-function (::Type{L})(itr; kw...) where {T,R,L<:AbstractLinear{T,R}}
+function (::Type{L})(itr;
+        is_filtered = itr isa AbstractLinear && termtype(itr) <: T,
+        kw...) where {T,R,L<:AbstractLinear{T,R}}
     a = zero(L; kw...)
     Base.haslength(itr) && sizehint!(a, length(itr))
-    is_filtered = itr isa AbstractLinear && termtype(itr) <: T
     for (x, c) in hashed_iter(itr)
         addmul!(a, x, c; is_filtered)
     end
