@@ -5,6 +5,14 @@
 using Base.Broadcast: Broadcasted, BroadcastStyle, DefaultArrayStyle
 import Base.Broadcast: instantiate
 
+const Add = typeof(+)
+const Sub = typeof(-)
+const Mul = typeof(*)
+const AddSub = Union{Add,Sub}
+
+const Tuple1 = Tuple{Any}
+const Tuple2 = Tuple{Any,Any}
+
 struct LinearStyle <: BroadcastStyle end
 
 export @linear_broadcastable
@@ -32,35 +40,36 @@ instantiate(bc::Broadcasted{LinearStyle}) = bc
 copy(::Broadcasted{LinearStyle}) = error("broadcasting not implemented for this operation")
 # fallback with meaningful error message
 
-function copy(bc::Broadcasted{LinearStyle, Nothing, typeof(*)})
+# TODO: do we need to worry about broadcasting of scalars, as in .- 3 .* a ?
+function copy(bc::Broadcasted{LinearStyle, Nothing, Mul, <:Tuple2})
     bca1, bca2 = bc.args
-    # TODO: we assume that bca1 is the scalar
-    mul!(copy(bca2), bca1)
-    # do we need to worry about broadcasting of scalars, as in .- 3 .* a ?
-    # mul!(copy(bca2), bca1 isa Broadcasted ? copy(bca1) : bca1)
+    if bca1 isa Broadcasted
+        mul!(copy(bca1), bca2)
+    elseif bca2 isa Broadcasted
+        mul!(copy(bca2), bca1)
+    else
+        bca1*bca2
+    end
 end
 
-function copy(bc::Broadcasted{LinearStyle, Nothing, typeof(+), <:Tuple{Any}})
-    bca1 = bc.args[1]
-    # TOOD: always copy? (that's done for .+ [1,2,3])
-    bca1 isa Broadcasted ? copy(bca1) : bca1
+function copy(bc::Broadcasted{LinearStyle, Nothing, Add, <:Tuple1})
+    # copying cannot be omitted, for example in ".+ a .+ a"
+    copy(bc.args[1])
 end
 
-function copy(bc::Broadcasted{LinearStyle, Nothing, typeof(+), <:Tuple{Any, Any}})
+function copy(bc::Broadcasted{LinearStyle, Nothing, Add})
 # TODO: promote types
-    bca1, bca2 = bc.args
-    _copyto!(copy(bca1), bca2, ONE)
+    foldl(addmul!, bc.args[2:end]; init = copy(bc.args[1]))
+    # addmul!(copy(bc.args[1]), Broadcast.broadcasted(+, bc.args[2:end]...)
 end
 
-function copy(bc::Broadcasted{LinearStyle, Nothing, typeof(-), <:Tuple{Any}})
-    bca1 = bc.args[1]
-    -(bca1 isa Broadcasted ? copy(bca1) : bca1)
+function copy(bc::Broadcasted{LinearStyle, Nothing, Sub, <:Tuple1})
+    mul!(copy(bc.args[1]), -ONE)
 end
 
-function copy(bc::Broadcasted{LinearStyle, Nothing, typeof(-), <:Tuple{Any, Any}})
+function copy(bc::Broadcasted{LinearStyle, Nothing, Sub, <:Tuple2})
 # TODO: promote types
-    bca1, bca2 = bc.args
-    _copyto!(copy(bca1), bca2, -ONE)
+    addmul!(copy(bc.args[1]), bc.args[2], -ONE)
 end
 
 # copyto!
@@ -68,72 +77,61 @@ end
 copyto!(::AbstractLinear, ::Broadcasted{LinearStyle}) = error("broadcasting not implemented for this operation")
 # fallback with meaningful error message
 
-function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(identity)})
+function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(identity), <:Tuple1})
     copyto!(a, bc.args[1])
 end
 
-function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(*)})
-    bca1, bca2 = bc.args
-    if a === bca1
-        mul!(bca1, bca2)
+function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, Mul, <:Tuple2})
+# we support two formats: a, b are AbstractLinear, c is a scalar
+# 1st format:  a .*= c that is, a .= a .* c,  2nd format:  a .= c .* b
+    if a === bc.args[1]
+        mul!(a, bc.args[2])
     else
-        zero!(a)
-        _copyto!(a, bca2, bca1)
-        # TODO: we assume that bca1 is the scalar
+        copyto!(a, bc.args[2], bc.args[1])
     end
 end
 
-function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(+)})
-    bca1, bca2 = bc.args
-    copyto!(a, bca1)
-    _copyto!(a, bca2, ONE)
+function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, Add, <:Tuple1})
+    copyto!(a, bc.args[1])
 end
 
-function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(-)})
-    bca1, bca2 = bc.args
-    copyto!(a, bca1)
-    _copyto!(a, bca2, -ONE)
+function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, Sub, <:Tuple1})
+    copyto!(a, bc.args[1], -ONE)
 end
 
-function _copyto!(a::AbstractLinear, b::AbstractLinear, c::Sign)
-    isone(c) ? add!(a, b) : sub!(a, b)
+function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, Add})
+    foldl(addmul!, bc.args[2:end]; init = copyto!(a, bc.args[1]))
+    # addmul!(copy(bc.args[1]), Broadcast.broadcasted(+, bc.args[2:end]...)
 end
 
-function _copyto!(a::AbstractLinear, b, c)
-    addmul!(a, b, c)
+function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, Sub, <:Tuple2})
+    copyto!(a, bc.args[1])
+    addmul!(a, bc.args[2], -ONE)
 end
+
+# addmul!
 
 # This is for types T that are converted to Array{T, 0}
-function _copyto!(a::AbstractLinear{T}, x::Array{T, 0}, c) where T
+function addmul!(a::AbstractLinear, x::Array{T, 0}, c = ONE) where T
     addmul!(a, x[], c)
 end
 
-function _copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(*)}, c)
+function addmul!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, Mul, <:Tuple2}, c = ONE)
     bca1, bca2 = bc.args
-    # TODO: this assumes that bca1 is the scalar
-    _copyto!(a, bca2, c * bca1)
+    # we assume that bca1 is the scalar
+    addmul!(a, bca2, c * bca1)
     # do we need to worry about broadcasting of scalars, as in .- 3 .* a ?
-    # _copyto!(a, bca2, c * (bca1 isa Broadcasted ? copy(bca1) : bca1))
 end
 
-function _copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(+), <:Tuple{Any}}, c)
-    bca = bc.args
-    _copyto!(a, bca[1], c)
+function addmul!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, Add}, c = ONE)
+    foldl((a, bca) -> addmul!(a, bca, c), bc.args; init = a)
 end
 
-function _copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(+), <:Tuple{Any, Any}}, c)
-    bca1, bca2 = bc.args
-    _copyto!(a, bca1, c)
-    _copyto!(a, bca2, c)
+function addmul!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, Sub, <:Tuple1}, c = ONE)
+    addmul!(a, bc.args[1], bc.f(c))
 end
 
-function _copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(-), <:Tuple{Any}}, c)
-    bca = bc.args
-    _copyto!(a, bca[1], -c)
-end
-
-function _copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, typeof(-), <:Tuple{Any, Any}}, c)
-    bca1, bca2 = bc.args
-    _copyto!(a, bca1, c)
-    _copyto!(a, bca2, -c)
+function addmul!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, Sub, <:Tuple2}, c = ONE)
+    addmul!(a, bc.args[1], c)
+    addmul!(a, bc.args[2], bc.f(c))
 end

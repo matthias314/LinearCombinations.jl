@@ -233,11 +233,17 @@ function mul!(a::DenseLinear{T,R}, c) where {T,R}
     a
 end
 
-function copyto!(a::DenseLinear, b::DenseLinear)
-    if a.b !== b.b
-        invoke(copyto!, Tuple{AbstractLinear,AbstractLinear}, a, b)
-    else
+function copyto!(a::DenseLinear, b::DenseLinear, c = ONE)
+    if iszero(c)
+        zero!(a)
+    elseif a.b !== b.b
+        invoke(copyto!, Tuple{AbstractLinear,AbstractLinear,Any}, a, b, c)
+    elseif isone(c)
         copyto!(a.v, b.v)
+    elseif c == -ONE
+        a.v .= .- b.v
+    else
+        a.v .= c .* b.v
     end
     a
 end

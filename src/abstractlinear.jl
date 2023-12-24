@@ -183,7 +183,8 @@ function addmul!(a::AbstractLinear, b::AbstractLinear, c; is_filtered::Bool = fa
     a
 end
 
-function addmul!(a::AbstractLinear, b::AbstractLinear, c::Sign; is_filtered::Bool = false)
+function addmul!(a::AbstractLinear, b::AbstractLinear, c::Sign = ONE; is_filtered::Bool = false)
+# c is optional to be compatible with addmul! for broadcasting
     isone(c) ? add!(a, b) : sub!(a, b)
 end
 
@@ -192,10 +193,9 @@ addmul(a::AbstractLinear, b, c) = addmul!(copy(a), b, c)
 add!(a::AbstractLinear, b::AbstractLinear) = modifylinear!(+, a, b)
 sub!(a::AbstractLinear, b::AbstractLinear) = modifylinear!(-, a, b)
 
-function copyto!(a::AbstractLinear, b)
+function copyto!(a::AbstractLinear, b, c = ONE)
 # b can be of type AbstractLinear or some term
-    a === b || add!(zero!(a), b)
-    a
+    a === b ? mul!(a, c) : addmul!(zero!(a), b, c)
 end
 
 function +(as::AbstractLinear...)
