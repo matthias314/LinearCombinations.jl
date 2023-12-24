@@ -224,10 +224,11 @@ function -(a::DenseLinear{T,R}) where {T,R}
 end
 
 function mul!(a::DenseLinear{T,R}, c) where {T,R}
-    if iszero(convert(R, c))
+    c1::R = c
+    if iszero(c1)
         zero!(a)
-    else
-        a.v .*= c
+    elseif !isone(c1)
+        a.v .*= c isa Sign ? c*1 : c
     end
     a
 end

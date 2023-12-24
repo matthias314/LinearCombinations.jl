@@ -80,9 +80,10 @@ function -(a::Linear{T,R}) where {T,R}
 end
 
 function mul!(a::Linear{T,R}, c) where {T,R}
-    if iszero(convert(R, c))
+    c1::R = c
+    if iszero(c1)
         zero!(a)
-    else
+    elseif !isone(c1)
         map!(x -> c*x, values(a.ht))
         is_domain(R) || filter!(xc -> !iszero(xc[2]), a.ht)
     end
