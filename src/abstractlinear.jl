@@ -136,8 +136,6 @@ function show(io::IO, a::AbstractLinear{T,R}) where {T,R}
     end
 end
 
-show(io::IO, ::MIME"text/plain", a::AbstractLinear) = show(io, a)
-
 convert(::Type{L}, x; kw...) where L <: AbstractLinear = L(x => one(coefftype(L)); kw...)
 
 convert(::Type{L}, a::AbstractLinear; kw...) where L <: AbstractLinear = linear_convert(L, a; kw...)
