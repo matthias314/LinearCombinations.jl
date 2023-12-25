@@ -54,14 +54,28 @@ eltype(a::L) where L <: AbstractLinear = eltype(L)
 termtype(::Type{<:AbstractLinear{T,R}}) where {T,R} = T
 termtype(::L) where L <: AbstractLinear = termtype(L)
 
-_termtype(::Type{T}) where T = T
+function _termtype(::Type{T}) where T
+    if T isa Union
+        promote_typejoin(_termtype(T.a), _termtype(T.a))
+    else
+        T
+    end
+end
+
 _termtype(::Type{<:AbstractLinear{T,R}}) where {T,R} = T
 _termtype(::T) where T = _termtype(T)
 
 coefftype(::Type{<:AbstractLinear{T,R}}) where {T,R} = R
 coefftype(::L) where L <: AbstractLinear = coefftype(L)
 
-_coefftype(::Type) = Sign
+function _coefftype(::Type{T}) where T
+    if T isa Union
+        promote_type(_coefftype(T.a), _coefftype(T.b))
+    else
+        Sign
+    end
+end
+
 _coefftype(::Type{<:AbstractLinear{T,R}}) where {T,R} = R
 _coefftype(::T) where T = _coefftype(T)
 
