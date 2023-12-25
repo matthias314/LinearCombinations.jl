@@ -2,16 +2,17 @@
 # AbstractBasis
 #
 
-export AbstractBasis, tobasis, toindex
+export AbstractBasis, toindex
 
-abstract type AbstractBasis{T,N} end
+import Base: getindex, axes, size
 
-eltype(::Type{<:AbstractBasis{T}}) where T = T
+abstract type AbstractBasis{T,N} <: AbstractArray{T,N} end
 
-function tobasis end
+show(io::IO, ::MIME"text/plain", b::AbstractBasis) = show(io, b)
+
+size(b::AbstractBasis) = map(length, axes(b))
+
 function toindex end
-
-arraydim(b::AbstractBasis{T,N}) where {T,N} = N
 
 #
 # Basis
@@ -19,39 +20,31 @@ arraydim(b::AbstractBasis{T,N}) where {T,N} = N
 
 export Basis
 
-struct Basis{T,V<:AbstractVector{T}} <: AbstractBasis{T,1}
+struct Basis{T,N,V<:AbstractArray{T,N}} <: AbstractBasis{T,N}
     list::V
-    invlist::Dict{T,Int}
+    invlist::Dict{T,CartesianIndex{N}}
 end
 
-function Basis(iter)
-    list = iter isa AbstractVector ? iter : collect(iter)
-    T = eltype(list)
-    invlist = Dict{T,Int}(list[i] => i for i in eachindex(list))
+function Basis(list::AbstractArray{T,N}) where {T,N}
+    invlist = Dict{T,CartesianIndex{N}}(list[i] => i for i in eachindex(IndexCartesian(), list))
     Basis(list, invlist)
 end
 
+Basis(iter) = Basis(collect(iter))
+
 show(io::IO, b::Basis) = print(io, "Basis(", repr(b.list), ')')
 
-length(b::Basis) = length(b.list)
+axes(b::Basis) = axes(b.list)
 
-Base.axes(b::Basis) = axes(b.list)
+==(b1::Basis, b2::Basis) = b1.list == b2.list
 
 @propagate_inbounds iterate(b::Basis, s...) = iterate(b.list, s...)
 
+@propagate_inbounds getindex(b::Basis, ii::Integer...) = b.list[ii...]
+
 in(x, b::Basis) = haskey(b.invlist, x)
 
-@propagate_inbounds tobasis(b::Basis, i) = b.list[i]
-
 toindex(b::Basis, x) = b.invlist[x]
-
-@propagate_inbounds function tobasis(bs::Tuple{Vararg{AbstractBasis}}, is)
-    Tensor(ntuple(k -> tobasis(bs[k], is[k]), length(bs)))
-end
-
-function toindex(bs::Tuple{Vararg{AbstractBasis}}, xs::Tensor)
-    CartesianIndex(ntuple(k -> toindex(bs[k], xs[k]), length(bs)))
-end
 
 #
 # TensorBasis
@@ -64,7 +57,7 @@ struct TensorBasis{T,N,BT<:Tuple{Vararg{AbstractBasis}}} <: AbstractBasis{T,N}
     function TensorBasis(bases::AbstractBasis...)
         TT = Tuple{map(eltype, bases)...}
         T = isconcretetype(TT) ? Tensor{TT} : Tensor{<:TT}
-        N = sum(arraydim, bases; init = 0)
+        N = sum(ndims, bases; init = 0)
         new{T,N,typeof(bases)}(bases)
     end
 end
@@ -75,11 +68,9 @@ function show(io::IO, b::TensorBasis)
     print(io, ')')
 end
 
-Base.axes(b::TensorBasis) = _cat(map(axes, b.bases)...)
+axes(b::TensorBasis) = _cat(map(axes, b.bases)...)
 
-length(b::TensorBasis) = prod(length, b.bases; init = 1)
-
-in(t::T, b::TensorBasis{T}) where T <: Tuple = all(splat(in), zip(t, b.bases))
+==(b1::TensorBasis, b2::TensorBasis) = b1.bases == b2.bases
 
 @propagate_inbounds iterate(b::TensorBasis, state...) =
     iterate(Iterators.map(Tensor, Iterators.product(b.bases...)), state...)
@@ -87,13 +78,14 @@ in(t::T, b::TensorBasis{T}) where T <: Tuple = all(splat(in), zip(t, b.bases))
 _tobasis(::Tuple{}, ::Tuple{}, x...) = Tensor(x)
 
 @propagate_inbounds function _tobasis(t::Tuple, ii, x...)
-    l1 = length(axes(t[1]))
-    x1 = tobasis(t[1], ii[1:l1]...)
+    l1 = ndims(t[1])
+    x1 = t[1][ii[1:l1]...]
     _tobasis(t[2:end], ii[l1+1:end], x..., x1)
 end
 
-@propagate_inbounds tobasis(b::TensorBasis{T,N}, ii::Vararg{Integer,N}) where {T,N} = _tobasis(b.bases, ii)
-@propagate_inbounds tobasis(b::TensorBasis, ii::CartesianIndex) = tobasis(b, Tuple(ii)...)
+@propagate_inbounds getindex(b::TensorBasis{T,N}, ii::Vararg{Integer,N}) where {T,N} = _tobasis(b.bases, ii)
+
+in(t::Tensor, b::TensorBasis) = all(splat(in), zip(t, b.bases))
 
 function toindex(b::TensorBasis{T}, t::U) where {T,U<:T}
     length(b.bases) == length(t) || error("TensorBasis and Tensor arguments must have the same length")
@@ -153,39 +145,12 @@ terms(a::DenseLinear) = Iterators.map(first, a)
 
 in(x, a::DenseLinear) = !iszero(a[x])
 
-#=
-tocartesian(l::Tuple{}, ii::Tuple) = CartesianIndex()
-tocartesian(l::Tuple{Integer}, ii::Tuple) = CartesianIndex(ii)
-
-function tocartesian(l::Tuple, ii::Tuple)
-    d, r = divrem(ii[end]-1, l[1])
-    tocartesian(l[2:end], (ii[1:end-1]..., r+1, d+1))
-end
-
-function iterate(a::DenseLinear{T,R}, i = firstindex(a.v)) where {T,R}
-    while i <= lastindex(a.v)
-        @inbounds c = a.v[i]
-        if a.b isa Tuple && i isa Integer
-            ii = tocartesian(size(a.v), (i,))
-        else
-            ii = i
-        end
-        if !iszero(c)
-            @inbounds x = tobasis(a.b, ii)
-            return (Pair{T,R}(x, c), i+1)
-        end
-        i += 1
-    end
-    nothing
-end
-=#
-
 function iterate(a::DenseLinear{T,R}, ss...) where {T,R}
     while (iis = iterate(CartesianIndices(a.v), ss...)) !== nothing
         ii, s = iis
         c = @inbounds a.v[ii]
         if !iszero(c)
-            @inbounds x = tobasis(a.b, ii)
+            @inbounds x = a.b[ii]
             return (Pair{T,R}(x, c), s)
         end
         ss = (s,)
