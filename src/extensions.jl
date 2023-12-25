@@ -283,7 +283,7 @@ macro multilinear_noesc(f, f0 = f)
                     sizehint!(addto, length(addto)+l)
                 end
                 Base.Cartesian.@nexprs(1, i -> cc_{$N+i} = coeff)  # initialize cc_{N+1}
-                Base.Cartesian.@nloops($N, xc, i -> a[i] isa $Linear ? a[i] : ((a[i], $ONE),), i -> begin
+                Base.Cartesian.@nloops($N, xc, i -> a[i] isa $AbstractLinear ? a[i] : ((a[i], $ONE),), i -> begin
                     x_i, c_i = xc_i
                     cc_i = c_i*cc_{i+1}
                 end, begin
