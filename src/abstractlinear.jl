@@ -25,8 +25,8 @@ linear_type(::Type{L}, ::Type, ::Type{R}) where {T,L<:AbstractLinear{T},R} = L{R
 function (::Type{L})(itr; kw...) where L <: AbstractLinear
     TR = element_type(itr)
     TR <: Pair || error("elements of the given iterator must be of type Pair")
-    T, R = TR.parameters
-    T = unhash(T)
+    T = unhash(element_type(x for (x, c) in itr))
+    R = element_type(c for (x, c) in itr)
     LTR = linear_type(L, T, R)
     LTR(itr; kw...)
 end
