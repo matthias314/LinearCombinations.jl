@@ -64,7 +64,7 @@ end
 
 function show(io::IO, b::TensorBasis)
     print(io, "TensorBasis(")
-    join(io, (repr(basis) for basis in b.bases), ',')
+    join(io, (repr(basis) for basis in b.bases), ", ")
     print(io, ')')
 end
 
