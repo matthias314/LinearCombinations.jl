@@ -160,7 +160,8 @@ export @multilinear
 multilin_return_type(f::F, x::A) where {F,A} = return_type(f, map(_termtype, x)...)
 
 function multilin_coeff_type(f::F, x::A) where {F,A<:Tuple}
-    promote_type(_coefftype(multilin_return_type(f, x)), map(_coefftype, x)...)
+    R = promote_type(_coefftype(multilin_return_type(f, x)), map(_coefftype, x)...)
+    R == Sign ? DefaultCoefftype : R
 end
 
 multilin_term_type(f::F, x::A) where {F,A<:Tuple} = _termtype(multilin_return_type(f, x))

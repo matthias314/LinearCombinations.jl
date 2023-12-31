@@ -65,6 +65,8 @@ end
 _termtype(::Type{<:AbstractLinear{T,R}}) where {T,R} = T
 _termtype(::T) where T = _termtype(T)
 
+const DefaultCoefftype = Int
+
 coefftype(::Type{<:AbstractLinear{T,R}}) where {T,R} = R
 coefftype(::L) where L <: AbstractLinear = coefftype(L)
 

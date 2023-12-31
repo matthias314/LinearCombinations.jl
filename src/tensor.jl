@@ -228,7 +228,8 @@ end
 @linear_kw function (g::TensorMap)(t::Tensor;
         coefftype = begin
             RR = ntuple(i -> linear_extension_coeff_type(g[i], typeof(t[i])), length(g))
-            promote_type(Sign, RR...)
+            R = promote_type(Sign, RR...)
+            R == Sign ? DefaultCoefftype : R
         end,
         addto = begin
             TT = ntuple(i -> linear_extension_term_type(g[i], typeof(t[i])), length(g))

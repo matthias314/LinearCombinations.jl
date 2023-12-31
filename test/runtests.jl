@@ -1,6 +1,6 @@
 using LinearCombinations, Test
 
-using LinearCombinations: Sign, Zero, ONE, unval
+using LinearCombinations: Sign, Zero, ONE, unval, DefaultCoefftype
 
 @testset "Sign" begin
     s0::Sign = 1
@@ -369,7 +369,7 @@ end
     @test a === b == Linear(t => -2.0)
     @test iszero(tensor(tt...; addto = a, coeff = 2))
     
-    @test @inferred(tensor(; coeff = ONE)) isa Linear{Tensor{Tuple{}},Sign}
+    @test @inferred(tensor(; coeff = ONE)) isa Linear{Tensor{Tuple{}},DefaultCoefftype}
     
     for R in (Int8, Int, BigInt, Float64, BigFloat), S in (Int8, Int, BigInt, Float64, BigFloat)
         a = Linear{Char,R}('x' => 1, 'y' => -2)
@@ -388,7 +388,7 @@ end
     
     for n in 1:8
         a = @inferred tensor(['a'+k for k in 1:n]...)
-        @test a isa Linear{Tensor{NTuple{n,Char}},Sign}
+        @test a isa Linear{Tensor{NTuple{n,Char}},DefaultCoefftype}
         a = @inferred tensor([Linear('a'+k => 2.0) for k in 1:n]...)
         @test a isa Linear{Tensor{NTuple{n,Char}},Float64}
     end
@@ -506,7 +506,7 @@ g0(x) = Linear(f0(x) => 2.0)
     h = tensormap()
     t = Tensor()
     a = @inferred tensor(; coefftype = Val(Int32))
-    @test h(t) == Linear(t => ONE)
+    @test h(t) == Linear(t => 1)
     @test h(a; coeff = 3) == 3*a
     
     h = tensormap(f0, f0)
@@ -517,12 +517,12 @@ g0(x) = Linear(f0(x) => 2.0)
         t = Tensor(x, y)
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^0)
-        @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Sign}
+        @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Int}
 
         a = tensor(x, y)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^0)
-        @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Sign}
+        @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Int}
     end
 
     h = tensormap(f0, g0)
@@ -582,12 +582,12 @@ g0(x) = Linear(f0(x) => 2.0)
         t = Tensor(x, y, z)
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^0)
-        @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Sign}
+        @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Int}
 	
         a = Tensor(x, y, z)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^0)
-        @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Sign}
+        @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Int}
     end
 
     h = tensormap(f0, f0, g0)
@@ -644,7 +644,7 @@ deg(::typeof(g1)) = 1
     h = tensormap()
     t = Tensor()
     a = @inferred tensor(; coefftype = Val(Int32))
-    @test h(t) == Linear(t => ONE)
+    @test h(t) == Linear(t => 1)
     @test h(a; coeff = 3) == 3*a
     
     h = tensormap(f1, f1)
@@ -655,12 +655,12 @@ deg(::typeof(g1)) = 1
         t = Tensor(x, y)
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^k1)
-        @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Sign}
+        @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Int}
 
         a = tensor(x, y)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^k1)
-        @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Sign}
+        @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Int}
     end
 
     h = tensormap(f1, g0)
@@ -720,12 +720,12 @@ deg(::typeof(g1)) = 1
         t = Tensor(x, y, z)
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^k2)
-        @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Sign}
+        @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Int}
 	
         a = Tensor(x, y, z)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^k2)
-        @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Sign}
+        @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Int}
     end
 
     h = tensormap(f1, f1, g0)
@@ -776,7 +776,7 @@ end
     h = tensormap()
     t = Tensor()
     a = @inferred tensor(; coefftype = Val(Int32))
-    @test h(t) == Linear(t => ONE)
+    @test h(t) == Linear(t => 1)
     @test h(a; coeff = 3) == 3*a
     
     h = tensormap(f1, f1)
@@ -787,12 +787,12 @@ end
         t = Tensor(x, y)
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^k1)
-        @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Sign}
+        @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Int}
 
         a = tensor(x, y)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^k1)
-        @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Sign}
+        @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Int}
     end
 
     h = tensormap(f1, g1)
@@ -852,12 +852,12 @@ end
         t = Tensor(x, y, z)
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^k2)
-        @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Sign}
+        @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Int}
 	
         a = Tensor(x, y, z)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^k2)
-        @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Sign}
+        @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Int}
     end
 
     h = tensormap(f1, f1, g1)

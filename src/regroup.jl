@@ -110,7 +110,8 @@ build_tensor_type(T...) = Tensor{Tuple{T...}}
 
 function regroup_tensor_coeff_type(T...)
     RS = map(Fix1(sign_type ∘ return_type, deg), T)
-    promote_type(Int, RS...)
+    R = promote_type(Sign, RS...)
+    R == Sign ? DefaultCoefftype : R
 end
 
 function regroup_tensor_type(rg::Regroup, ::Type{T}, coefftype, ::Val{isunionall} = Val(false)) where {T<:Tensor,isunionall}
