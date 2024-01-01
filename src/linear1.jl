@@ -40,9 +40,14 @@ iterate(a::Linear1{T,R}) where {T,R} = iszero(a) ? nothing : (Pair{T,R}(a.x, a.c
 # "Pair{T,R}" is important for performance
 iterate(a::Linear1, ::Int) = nothing
 
-getindex(a::Linear1{T,R}, x) where {T,R} = x in a ? a.c : zero(R)
+function getindex(a::Linear1, x)
+    y, c = termcoeff(x => ONE)
+    inv(c)*getcoeff(a, y)
+end
 
-function setindex!(a::Linear1{T}, c, x) where T
+getcoeff(a::Linear1{T,R}, x) where {T,R} = x in a ? a.c : zero(R)
+
+function setcoeff!(a::Linear1, c, x)
     if iszero(a)
         a.x = x
     elseif a.x != x

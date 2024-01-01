@@ -158,12 +158,12 @@ function iterate(a::DenseLinear{T,R}, ss...) where {T,R}
     nothing
 end
 
-function getindex(a::DenseLinear, x)
+function getcoeff(a::DenseLinear, x)
     i = toindex(a.b, unhash(x))
     @inbounds a.v[i]
 end
 
-function setindex!(a::DenseLinear, c, x)
+function setcoeff!(a::DenseLinear, c, x)
     i = toindex(a.b, unhash(x))
     @inbounds a.v[i] = c
 end

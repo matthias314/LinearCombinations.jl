@@ -167,6 +167,17 @@ sizehint!(a::AbstractLinear, ::Integer) = a
 # default filter, also used for type Hashed
 linear_filter(x) = true
 
+function getindex(a::AbstractLinear{T,R}, x) where {T,R}
+    y, c = termcoeff(x => ONE)
+    linear_filter(y) ? inv(c)*getcoeff(a, y) : zero(R)
+end
+
+function setindex!(a::AbstractLinear{T,R}, c, x) where {T,R}
+    y, d = termcoeff(x => c)
+    linear_filter(y) && setcoeff!(a, d, y)
+    c
+end
+
 modifycoeff!(op, a::AbstractLinear{T}, x, c) where T = modifycoeff!(op, a, Hashed{T}(x), c)
 
 function modifylinear!(op::F, a::AbstractLinear, b::AbstractLinear, c = missing) where F

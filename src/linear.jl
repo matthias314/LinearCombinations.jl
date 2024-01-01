@@ -40,10 +40,15 @@ in(x, a::Linear{T}) where T = haskey(a.ht, Hashed{T}(x))
 
 hashed_iter(a::Linear) = a.ht
 
-getindex(a::Linear{T,R}, x) where {T,R} = get(a.ht, Hashed{T}(x), zero(R))
+function getindex(a::Linear, x)
+    y, c = termcoeff(x => ONE)
+    inv(c)*getcoeff(a, y)
+end
 
-function setindex!(a::Linear{T}, c, x) where T
-    if !iszero(c) && linear_filter(x)
+getcoeff(a::Linear{T,R}, x) where {T,R} = get(a.ht, Hashed{T}(x), zero(R))
+
+function setcoeff!(a::Linear{T}, c, x) where T
+    if !iszero(c)
         a.ht[Hashed{T}(x)] = c
     end
     c

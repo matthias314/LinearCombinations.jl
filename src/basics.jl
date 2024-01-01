@@ -64,6 +64,8 @@ iszero(s::Sign) = false
 *(x, s::Sign) = s*x
 *(s::Sign, t::Sign) = Sign(xor(s.neg, t.neg))
 
+Base.inv(s::Sign) = s
+
 ==(s::Sign, x) = isone(s*x)
 ==(x, s::Sign) = s == x
 ==(s::Sign, t::Sign) = s.neg == t.neg
