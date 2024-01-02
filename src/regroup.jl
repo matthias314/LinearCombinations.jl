@@ -100,11 +100,15 @@ const swap = regroup(:((1,2)), :((2,1)))
 # regrouping of tensors
 #
 
+_length(::Type{T}) where T <: Tuple = length(T.parameters)
+_length(::Type{T}) where T <: Tensor = @inbounds _length(T.parameters[1])
+
 _getindex(x) = x
 @propagate_inbounds _getindex(x, i) = x[i]
 @propagate_inbounds _getindex(x, i, ii...) = _getindex(_getindex(x, i), ii...)
 
-@propagate_inbounds _getindex(::Type{Tensor{T}}, i) where T <: Tuple = T.parameters[i]
+@propagate_inbounds _getindex(::Type{T}, i) where T <: Tuple = T.parameters[i]
+@propagate_inbounds _getindex(::Type{T}, i) where T <: Tensor = _getindex(T.parameters[1], i)
 
 build_tensor_type(T...) = Tensor{Tuple{T...}}
 
@@ -120,6 +124,14 @@ function regroup_tensor_type(rg::Regroup, ::Type{T}, coefftype, ::Val{isunionall
     Linear1{W,coefftype}
 end
 
+regroup_check_arg(::Type, ::Type, ::Type) = true
+
+Base.@assume_effects :nothrow function regroup_check_arg(::Type{T}, ::Type{TT}, ::Type{TX}) where {T,TT<:Tuple,TX}
+    n = _length(TT)
+    TX <: T && _length(TX) == n &&
+        all(ntuple(i -> regroup_check_arg(T, _getindex(TT, i), _getindex(TX, i)), n))
+end
+
 # @assume_effects allows to omit the sign computation for has_char2 coefficients
 Base.@assume_effects :foldable :nothrow @generated function regroup_tensor_signexp(rg, f, x)
     args = Expr(:tuple, regroup_get(rg, :args)...)
@@ -131,11 +143,21 @@ Base.@assume_effects :foldable :nothrow @generated function regroup_tensor_signe
     end
 end
 
-@linear_kw function (rg::Regroup)(x::T;
-        coefftype = regroup_tensor_coeff_type(map(typeof, factors(x))...),
-        addto = zero(regroup_tensor_type(rg, T, unval(coefftype))),
+@linear_kw function (rg::Regroup{A})(x::T;
+        coefftype = begin
+                regroup_check_arg(Tensor, typeof(A), T) ||
+                    error("argument type $(typeof(x)) does not match first Regroup parameter $A")
+                regroup_tensor_coeff_type(map(typeof, factors(x))...)
+            end,
+        addto = begin
+                regroup_check_arg(Tensor, typeof(A), T) ||
+                    error("argument type $(typeof(x)) does not match first Regroup parameter $A")
+                zero(regroup_tensor_type(rg, T, unval(coefftype)))
+            end,
         coeff = ONE,
-        is_filtered::Bool = false) where T <: Tensor
+        is_filtered::Bool = false) where {A,T<:Tensor}
+    regroup_check_arg(Tensor, typeof(A), T) ||
+        error("argument type $(typeof(x)) does not match first Regroup parameter $A")
     addmul!(addto, regroup_eval_expr(rg, _getindex, Tensor, x),
             signed(regroup_tensor_signexp(rg, deg ∘ _getindex, x), coeff); is_filtered)
         # @inbounds has no effect for building the tensor or computing the sign
