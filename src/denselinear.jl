@@ -221,8 +221,9 @@ export matrixrepr!, matrixrepr
 
 using Base: OneTo
 
-function matrixrepr!(a::AbstractMatrix, f, b1::AbstractBasis, b0::AbstractBasis{T}) where T
+function matrixrepr!(f, a::AbstractMatrix{R}, b1::AbstractBasis, b0::AbstractBasis{T}; iszero::Bool = false) where {R,T}
     axes(a) == (OneTo(length(b1)), OneTo(length(b0))) || error("matrix has wrong dimensions")
+    iszero || fill!(a, zero(R))
     axes1 = axes(b1)
     for (i, x) in enumerate(b0)
         addto = @inbounds DenseLinear(reshape(view(a, :, i), axes1); basis = b1)
@@ -237,5 +238,5 @@ end
 
 function matrixrepr(f, b1::AbstractBasis, b0::AbstractBasis{T}, ::Type{R}) where {T,R}
     a = zeros(R, length(b1), length(b0))
-    matrixrepr!(a, f, b1, b0)
+    matrixrepr!(f, a, b1, b0; iszero = true)
 end
