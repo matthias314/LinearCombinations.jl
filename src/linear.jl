@@ -62,9 +62,13 @@ end
 
 getcoeff(a::Linear{T,R}, x) where {T,R} = get(a.ht, Hashed{T}(x), zero(R))
 
-function setcoeff!(a::Linear{T}, c, x) where T
-    if !iszero(c)
-        a.ht[Hashed{T}(x)] = c
+function setcoeff!(a::Linear{T,R}, c, x) where {T,R}
+    cc = convert(R, c)
+    x = Hashed{T}(x)
+    if iszero(cc)
+        delete!(a.ht, x)
+    else
+        a.ht[x] = cc
     end
     c
 end

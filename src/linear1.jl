@@ -89,14 +89,21 @@ end
 
 getcoeff(a::Linear1{T,R}, x) where {T,R} = x in a ? a.c : zero(R)
 
-function setcoeff!(a::Linear1, c, x)
-    if iszero(a)
-        a.x = x
-    elseif a.x != x
+function setcoeff!(a::Linear1{T,R}, c, x) where {T,R}
+    cc = convert(R, c)
+    if a.iszero
+        if !iszero(cc)
+            a.x = x
+            a.c = cc
+            a.iszero = false
+        end
+    elseif a.x == x
+        a.c = cc
+        a.iszero = iszero(cc)
+    elseif !iszero(cc)
         error("Linear1 cannot store linear combinations of two or more elements")
     end
-    a.iszero = iszero(c)
-    a.c = c
+    c
 end
 
 function modifycoeff!(op, a::Linear1{T,R}, x, c) where {T,R}
