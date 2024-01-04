@@ -10,11 +10,83 @@ using MacroTools
 
 Base.@nospecializeinfer hastrait(f, trait::Val, @nospecialize(types...)) = false
 
+"""
+    $(@__MODULE__).has_coefftype(f, types...) -> Bool
+
+Return `true` if the method for `f` with signature given by `types` is known
+to support the keyword argument `coefftype`. The macro `@linear_kw` is used to make
+this keyword known to the $(@__MODULE__) package.
+
+See also
+[`@linear_kw`](@ref),
+[`$(@__MODULE__).has_addto_coeff`](@ref),
+[`$(@__MODULE__).has_isfiltered`](@ref),
+[`$(@__MODULE__).has_sizehint`](@ref).
+"""
 has_coefftype(f, types...) = hastrait(f, Val(:coefftype), types...)
+
+"""
+    $(@__MODULE__).has_addto_coeff(f, types...) -> Bool
+
+Return `true` if the method for `f` with signature given by `types` is known
+to support the keyword arguments `addto` and `coeff`. The macro `@linear_kw` is used to make
+these keywords known to the $(@__MODULE__) package.
+
+See also
+[`@linear_kw`](@ref),
+[`$(@__MODULE__).has_coefftype`](@ref),
+[`$(@__MODULE__).has_isfiltered`](@ref),
+[`$(@__MODULE__).has_sizehint`](@ref).
+"""
 has_addto_coeff(f, types...) = hastrait(f, Val(:addto_coeff), types...)
+
+"""
+    $(@__MODULE__).has_isfiltered(f, types...) -> Bool
+
+Return `true` if the method for `f` with signature given by `types` is known
+to support the keyword argument `is_filtered::Bool`. The macro `@linear_kw` is used to make
+this keyword known to the $(@__MODULE__) package.
+
+The keyword argument `is_filtered = true` for a linear or multilinear function `f` indicates
+this potentially expensive test can be skipped when evaluating `f`.
+
+See also
+[`@linear_kw`](@ref),
+[`$(@__MODULE__).has_coefftype`](@ref),
+[`$(@__MODULE__).has_addto_coeff`](@ref),
+[`$(@__MODULE__).has_sizehint`](@ref),
+[`keeps_filtered`](@ref).
+"""
 has_isfiltered(f, types...) = hastrait(f, Val(:isfiltered), types...)
+
+"""
+    $(@__MODULE__).has_sizehint(f, types...) -> Bool
+
+Return `true` if the method for `f` with signature given by `types` is known
+to support the keyword argument `sizehint`. The macro `@linear_kw` is used to make
+this keyword known to the $(@__MODULE__) package.
+
+See also
+[`@linear_kw`](@ref),
+[`$(@__MODULE__).has_coefftype`](@ref),
+[`$(@__MODULE__).has_addto_coeff`](@ref),
+[`$(@__MODULE__).has_isfiltered`](@ref),
+"""
 has_sizehint(f, types...) = hastrait(f, Val(:sizehint), types...)
 
+"""
+    keeps_filtered(f, types...) -> Bool
+
+Return `true` if the following is satisfied, and `false` otherwise: Whenever the function `f` is
+called with arguments of types `types` and returns a single term `y`, then `linear_filter(y) == true` holds.
+
+By default, `keeps_filtered` returns `false` for all arguments. This can be changed to avoid unneccesary
+(and possibly expensive) calls to `linear_filter`. Note that if `f` returns a linear combination when called
+with term arguments, then all terms appearing in this linear combination satisfy the condition above anyway.
+The setting for `keeps_filtered` doesn't matter in this case.
+
+See also [`$(@__MODULE__).linear_filter`](@ref).
+"""
 keeps_filtered(f, ::Type...) = false
 keeps_filtered(::typeof(identity), ::Type) = true
 
@@ -25,6 +97,65 @@ function addtraits!(ex, def::Dict, traits)
     push!(ex.args, combinedef(def))
 end
 
+"""
+    @linear_kw function def
+
+`@linear_kw` scans a function definition for the keywords `coefftype`, `addto`, `coeff`
+and `sizehint!` and makes them known to the `$(@__MODULE__)` package. This allows to
+write performant code. Not all keywords have to present. However, `addto` and `coeff`
+only have an effect if used together.
+
+See also
+[`$(@__MODULE__).has_coefftype`](@ref),
+[`$(@__MODULE__).has_addto_coeff`](@ref),
+[`$(@__MODULE__).has_isfiltered`](@ref),
+[`$(@__MODULE__).has_sizehint`](@ref),
+[`$(@__MODULE__).unval`](@ref).
+
+# Example
+
+Consider the following two functions:
+```jldoctest addto-coeff; output = false
+f(x::Char) = Linear(uppercase(x) => 1, x => -1)
+
+@linear f
+
+using LinearCombinations: unval   # unwraps a Val argument
+
+@linear_kw function g(x::Char;
+        coefftype = Int,
+        addto = zero(Linear{Char,unval(coefftype)}),
+        coeff = 1)
+    addmul!(addto, uppercase(x), coeff)
+    addmul!(addto, x, -coeff)
+    addto
+end
+
+@linear g
+
+# output
+
+g (generic function with 2 methods)
+```
+The linear extensions are functionally equivalent,  but `g` will be much faster than `f`.
+```jldoctest addto-coeff
+julia> a = Linear('x' => 1, 'y' => 2)
+x+2*y
+
+julia> f(a; coefftype = Float64, coeff = 2)
+4.0*Y-2.0*x-4.0*y+2.0*X
+
+julia> g(a; coefftype = Float64, coeff = 2)
+4.0*Y-2.0*x-4.0*y+2.0*X
+```
+Test whether keywords have been registered:
+```jldoctest addto-coeff
+julia> using LinearCombinations: has_coefftype, has_addto_coeff, has_sizehint
+
+julia> has_coefftype(g, Char), has_addto_coeff(g, Char), has_sizehint(g, Char)
+(true, true, false)
+```
+"""
 macro linear_kw(ex)
     # skip macro calls
     ex1 = ex
@@ -69,6 +200,94 @@ function linear_extension_type(f, ::Type{L}, ::Type{R}) where {L<:AbstractLinear
     L <: Linear1 && (LU <: Linear1 || !(LU <: AbstractLinear)) ? Linear1{U,R} : Linear{U,R}
 end
 
+"""
+    @linear f
+
+This macro defines a linear extension of the function (or callable object) `f`.
+More specifically, it defines a new method `f(a::AbstractLinear{T,R}; kw...) where {T,R}` that returns
+the linear combination obtained by summing up `c*f(x)` for all term-coefficient pairs `x => c`
+appearing in `a`.
+
+The new method recognizes the following keyword arguments:
+
+* `coefftype`:
+    This optional keyword argument specifies the coefficient type of the linear combination returned
+    by `f(a)` if the keyword argument `addto` is not present. If `coefftype` is also not specified
+    and `f(x::T)` is a term (as opposed to a linear combination), then `coefftype` is set to `R`.
+    If `f(x::T) <: AbstractLinear`, say with coefficient type `S`, then `promote_type(R, S)`
+    is chosen as the new coefficient type. If the `addto` keyword is present, then `coefftype` is ignored.
+
+    Because of the way Julia handles keyword arguments, the form `f(a; coefftype = Int)` is not type-stable.
+    Type stability can be achieved by saying `f(a; coefftype = Val(Int))`.
+
+* `addto::AbstractLinear`:
+    If given, the sum of all terms `c*f(x)` is added to `addto`, and the result is returned.
+    This avoids allocating a new linear combination each time `f` is called with an `AbstractLinear` argument.
+    The default value for `addto` is `Linear{U,coefftype}`. Here `U` is the return type of `f(x::T)`
+    if this return type is not a subtype of `AbstractLinear` and the term type of the return values otherwise.
+
+* `coeff`:
+    This optional keyword argument allows to efficiently compute scalar multiples of `f(a)`. More precisely,
+    `f(a; coeff = c)` returns `c*f(a)`, and `f(a; addto = b, coeff = c)` adds `c*f(a)` to `b` and returns
+    this new value.
+
+* `sizehint::Bool = true`:
+    The new method for `f` may call `sizehint!` for `addto` to pre-allocate room for the new terms.
+    This keyword argument permits to turn pre-allocation off.
+
+All other keyword arguments are passed on to `f(x)`. With the macro `@linear_kw` one can make `f(a)` pass
+the special keyword arguments listed above on to `f(x)`, too.
+
+See also [`@multilinear`](@ref), [`sizehint!`](@ref), [`@linear_kw`](@ref), [`keeps_filtered`](@ref).
+
+# Examples
+
+## Linear extension of a function returning a term
+
+```jldoctest linear
+julia> f(x) = uppercase(x); @linear f
+f (generic function with 2 methods)
+
+julia> a = Linear('x' => 1, 'y' => 2)
+x+2*y
+
+julia> f(a)
+2*Y+X
+
+julia> f(a; coefftype = Float64)
+2.0*Y+X
+
+julia> b = Linear('z' => 3); f(a; addto = b, coeff = -1); b
+-2*Y-X+3*z
+```
+
+## Linear extension of a function returning a linear combination
+
+```jldoctest linear
+julia> g(x) = Linear(x*x => 1.0, string(x) => -1.0); @linear g
+g (generic function with 2 methods)
+
+julia> g("x"), g("")
+(xx-x, 0)
+
+julia> g(a)   # same a as before
+xx-x+2.0*yy-2.0*y
+
+julia> g(a; coefftype = Val(Int), coeff = 3.0)
+3*xx-3*x+6*yy-6*y
+```
+
+## Linear extension of a callable object
+
+```jldoctest linear
+julia> struct P y::String end
+
+julia> (p::P)(x) = p.y*x*p.y; @linear p::P
+
+julia> p = P("w"); p(a)   # same a as before
+wxw+2*wyw
+```
+"""
 macro linear(f)
     F = esc(f)
     quote
@@ -77,7 +296,7 @@ macro linear(f)
                 # addto = zero(Linear{linear_extension_term_type($F, T), coefftype}),
                 addto = zero(linear_extension_type($F, L, unval(coefftype))),
                 coeff = ONE,
-                sizehint = true,
+                sizehint::Bool = true,
                 kw...) where {T,R,L<:AbstractLinear{T,R}}
             if iszero(coeff)
                 ;
@@ -123,6 +342,24 @@ hastrait(f::ComposedFunctionOuterKw, trait::Val, types...) = hastrait(f.outer, t
 
 export LinearExtension
 
+"""
+    LinearExtension{F}
+
+This type is the linear extension of the given type `F`.
+
+# Examples
+
+```jldoctest
+julia> const g = LinearExtension(uppercase)
+LinearExtension(uppercase)
+
+julia> g('x')
+'X': ASCII/Unicode U+0058 (category Lu: Letter, uppercase)
+
+julia> a = Linear('x' => 1, 'y' => 2); g(a; coeff = 3)
+6*Y+3*X
+```
+"""
 struct LinearExtension{F}  # <: Function
     f::F
     name::String
@@ -228,6 +465,93 @@ _length(a::AbstractLinear) = length(a)
     end
 end
 
+"""
+    @multilinear f
+    @multilinear f f0
+
+This macro defines a multilinear extension of the function `f` (or `f0`). This is analogous to `@linear f`.
+The new methods accepts both terms and linear combinations as arguments. It linearly expands all arguments that are
+linear combinations and then calls `f` for each combination of terms. If `f0` is specified, then `f0` is called
+instead to evaluate terms.
+
+The new method always returns a linear combination (of type `Linear` unless this is overriden by the `addto`
+keyword). The term type is inferred from the return type of `f` (or `f0`) with terms as arguments. The coefficient type
+is computed by promoting the coefficient types of all `AbstractLinear` arguments. In case `f` (or `f0`) returns
+a linear combination for term arguments, that coefficient type is also taken into account.
+
+In order to catch all possible combinations of terms and linear combinations, `@multilinear f` and
+`@multilinear f f0` define a single new method `f(x...; kw...)` that matches **all** argument types.
+(This is different from `@linear`.) Hence, if `f0` is not given, then the methods for `f` that evaluate
+terms must have a non-generic signature. If instead the signature also is `f(x::Any...)`, then this
+method is overwritten, resulting in an error when `f` is called.
+
+The new method defined by `@multilinear` accepts all keyword arguments discussed for `@linear`. Unknown
+keyword arguments are passed on to the call for term evaluation. The macro `@linear_kw` works as for
+linear functions.
+
+If the two-argument version of `@multilinear` is used, then typically there is no other method for `f`.
+Hence `f` returns a linear combination for all arguments in this case. If all arguments are terms and also `f0`
+returns a term, then the coefficient type is `$(@__MODULE__).DefaultCoefftype`. For the one-argument version there
+must be at least one other method as discussed above. So `f` may not return a linear combination for all arguments.
+
+See also [`@linear`](@ref), [`@linear_kw`](@ref), [`$(@__MODULE__).DefaultCoefftype`](@ref).
+
+# Examples
+
+## Bilinear extension of a function returning a term
+
+```jldoctest multilinear
+julia> f(x::Char, y::String) = x*y; @multilinear f
+
+julia> a, b = Linear('x' => 1, 'y' => 2), Linear("z" => 1.0, "w" => -1.0)
+(x+2*y, -w+z)
+
+julia> f(a, "z")
+2*yz+xz
+
+julia> f('x', b)
+-xw+xz
+
+julia> f(a, b)
+-xw+2.0*yz-2.0*yw+xz
+```
+
+## Bilinear extension of a function returning a linear combination
+
+```jldoctest multilinear
+julia> f(x::Char, y::String) = Linear(x*y => BigInt(1), y*x => BigInt(-1)); @multilinear f
+
+julia> f(a, b)   # same a and b as before
+-2.0*zy-xw-zx+2.0*yz+wx-2.0*yw+xz+2.0*wy
+
+julia> typeof(ans)
+Linear{String, BigFloat}
+```
+
+## Multilinear extension of a function
+
+```jldoctest multilinear
+julia> g(xs::Union{Char,String}...) = *(xs...); @multilinear g
+
+julia> g(a)   # same a and b as before
+x+2*y
+
+julia> g(a, b)
+-xw+2.0*yz-2.0*yw+xz
+
+julia> g(a, b, a)
+-xwx+xzx+4.0*yzy+2.0*xzy+2.0*yzx-2.0*ywx-2.0*xwy-4.0*ywy
+```
+
+## Multilinear extension using the two-argument version of `@multilinear`
+
+```jldoctest multilinear
+julia> @multilinear(h, *)
+
+julia> h(a, b; coeff = 2)   # same a and b as before
+-2.0*xw+4.0*yz-4.0*yw+2.0*xz
+```
+"""
 macro multilinear(f, f0 = f)
     F = esc(f)
     F0 = esc(f0)
@@ -311,6 +635,25 @@ struct MultilinearExtension{F}
     name::String
 end
 
+"""
+    MultilinearExtension(f)
+    MultilinearExtension(f, name)
+
+An element of this type is a multilinear extension of `f`. One can additionally specify the name displayed for it.
+
+# Example
+
+```jldoctest
+julia> a, b = Linear('x' => 1, 'y' => 2), Linear("z" => 1.0, "w" => -1.0)
+(x+2*y, -w+z)
+
+julia> const concat = MultilinearExtension(*, "concat")
+concat
+
+julia> concat(a, b)
+-xw+2.0*yz-2.0*yw+xz
+```
+"""
 MultilinearExtension(f::F, name = "MultilinearExtension($(repr(f)))") where F = MultilinearExtension{F}(f, name)
 
 keeps_filtered(g::MultilinearExtension, T::Type) = keeps_filtered(g.f, T)
@@ -376,6 +719,15 @@ end
 
 export coprod
 
+"""
+    coprod(x)
+
+The coproduct (or comultiplication) of `x`. The argument `x` is assumed to be an element of a coalgebra.
+
+The module $(@__MODULE__) only defines the linear extension of `coprod`, but no methods for terms.
+"""
+function coprod end
+
 @linear coprod
 
 #
@@ -383,6 +735,15 @@ export coprod
 #
 
 export diff
+
+"""
+    diff(x)
+
+The differential of `x`.
+
+The module $(@__MODULE__) only defines the linear extension of `diff`, but no methods for terms.
+"""
+function diff end
 
 @linear diff
 

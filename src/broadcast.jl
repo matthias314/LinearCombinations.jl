@@ -13,10 +13,26 @@ const AddSub = Union{Add,Sub}
 const Tuple1 = Tuple{Any}
 const Tuple2 = Tuple{Any,Any}
 
+"""
+    $(@__MODULE__).LinearStyle
+
+The broadcasting style used for linear combinations.
+
+See also [`@linear_broadcastable`](@ref).
+"""
 struct LinearStyle <: BroadcastStyle end
 
 export @linear_broadcastable
 
+"""
+    @linear_broadcastable T
+
+Add the type `T` to the types that participate in broadcasting for linear combinations.
+By default, only the types `AbstractLinear` and `Number` are available. (A few others
+happen to work as well, for example `AbstractChar`.)
+
+See also [`$(@__MODULE__).LinearStyle `](@ref).
+"""
 macro linear_broadcastable(T)
     quote
         Broadcast.BroadcastStyle(::Type{<:$(esc(T))}) = LinearStyle()

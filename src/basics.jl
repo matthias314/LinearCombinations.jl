@@ -15,6 +15,8 @@ element_type(g::Base.Generator) = return_type(g.f, element_type(g.iter))
 # basics
 #
 
+error_missing(T) = error("implementation missing for type ", T)
+
 macro Function(T)
 # turns a type (constructor) into a function
     :( (x...; kw...) -> $(esc(T))(x...; kw...) )
@@ -24,8 +26,27 @@ end
 Eval(f, x...; kw...) = f(x...; kw...)
 
 # unwrapping Val
+"""
+    $(@__MODULE__).unval(x)
+
+Return `c` if the argument `x` is of type `Val{c}` and `x` itself otherwise.
+
+This can be used to write type-stable code for the `coefftype` keyword argument
+to linear and multilinear functions.
+
+See also [`@linear`](@ref), [`@linear_kw`](@ref), [`@multilinear`](@ref).
+
+# Examples
+```jldoctest
+julia> $(@__MODULE__).unval(Char)
+Char
+
+julia> $(@__MODULE__).unval(Val(Char))
+Char
+```
+"""
 unval(x) = x
-unval(::Val{x}) where x = x
+unval(::Val{c}) where c = c
 
 struct ComposedFunctionOuterKw{O,I}
     outer::O
@@ -94,6 +115,12 @@ sign_type(::Type{T}) where T <: Integer = Sign
 
 # Zero
 
+"""
+    Zero
+
+`Zero` is a type whose only value `Zero()` behaves like `0`, but allows
+for simplification at compile time.
+"""
 struct Zero end
 
 zero(::Type{Zero}) = Zero()
@@ -131,9 +158,30 @@ sign_type(::Type{Zero}) = Sign
 
 export is_domain, has_char2
 
+"""
+    is_domain(::Type{R}) where R -> Bool
+
+Return `true` if the ring `R` is known to be integral domain and `false` otherwise.
+An integral domain is a commutative ring without zero divisors.
+
+By default, `is_domain` returns `true` only for subtypes of `Real` and `Complex`.
+If `is_domain(R) == true`, then sometimes more efficient algorithms can be chosen.
+
+See also [`has_char2`](@ref).
+"""
 is_domain(::Type) = false
 is_domain(::Type{<:Union{Real,Complex}}) = true
 
+"""
+    has_char2(::Type{R}) where R -> Bool
+
+Return `true` if the ring `R` is known to have characteristic `2` and `false` otherwise.
+
+By default, `has_char2` returns `false` for all arguments. Changing it to `true` for a ring `R`
+avoids (possibly expensive) sign computations.
+
+See also [`is_domain`](@ref).
+"""
 has_char2(::Type) = false
 
 signed(k, x::R) where R = has_char2(R) || iseven(k) ? x : -x
@@ -145,6 +193,14 @@ sum0(f, itr) = sum(f, itr; init = Zero())
 # Hashed datatype
 #
 
+"""
+    $(@__MODULE__).Hashed{T}
+
+`Hashed{T}(x::T)` is a wrapper that stores `hash(x)` along with `x`. Computing the hash of such
+an element returns the stored hash value.
+
+See also [`$(@__MODULE__).unhash`](@ref).
+"""
 struct Hashed{T}
     var::T
     hash::UInt
@@ -161,6 +217,13 @@ convert(::Type{Hashed{T}}, x::Hashed) where T = Hashed{T}(x)
 hash(x::Hashed) = x.hash
 hash(x::Hashed, h::UInt) = hash(x.var, h)
 
+"""
+    $(@__MODULE__).unhash(x)
+
+Return the argument unless it is of the form `Hashed{T}(y)`, in which case `y` is returned.
+
+See also [`$(@__MODULE__).Hashed`](@ref).
+"""
 unhash(x) = x
 unhash(x::Hashed) = x.var
 
@@ -175,6 +238,14 @@ show(io::IO, x::Hashed) = print(io, x.var)
 
 export deg
 
+"""
+    deg(x)
+
+Return the degree of `x`. The default value of `deg(x)` is `0`.
+(More precisely, it is `$(@__MODULE__).Zero()`, which behaves like `0`.)
+
+See also [`$(@__MODULE__).Zero`](@ref).
+"""
 deg(_) = Zero()
 
 deg(f::ComposedFunction) = deg(f.outer) + deg(f.inner)

@@ -67,6 +67,15 @@ const RegroupCacheEltype = NamedTuple{(:expr, :args, :perm), Tuple{Expr, Vector{
 
 const regroup_cache = IdDict{Any,RegroupCacheEltype}()
 
+"""
+    LinearCombinations.Regroup{A, B}
+
+Applying a `Regroup` object to a Tensor or a linear combinations of tensors rearranges
+the components of the tensor. Use `regroup` to create a `Regroup` object. It is possible
+to define additional methods to apply `Regroup` objects to other arguments besides tensors.
+
+See also [`regroup`](@ref).
+"""
 struct Regroup{A,B} end
 
 # == is ===
@@ -76,6 +85,58 @@ regroup_get(::Type{T}, field) where T <: Regroup = regroup_cache[T][field]
 
 show(io::IO, rg::Regroup{A,B}) where {A,B} = print(io, "Regroup{$A,$B}")
 
+"""
+    regroup(a, b) -> Regroup
+
+Return a `Regroup` object that can be used to rearrange the components of tensors and
+possibly other structures.
+
+The actual rearrangement is specified by the two parameters `a` and `b`.
+Both are expression trees consisting of nested tuples of integers.
+These trees encode the structure of nested tensors, and the integers specify
+a mapping from the components of the nested source tensor to the nested target tensor.
+The labels for `a` and `b` can in fact be of any `isbits` type instead of `Int`, but
+they must be the same for `a` and `b`.
+
+The return value `rg = regroup(a, b)` is a callable object. An argument `t` for `rg` must be
+a nested tensor of the same shape as the `a` tree, and the return value is a `Tensor` of the same
+shape as `b`. The components of the nested tensor `t` are permuted according to the labels.
+
+If the components of `t` have non-zero degrees, then `rg(t)` additionally has a sign according to
+the usual sign rule: whenever two ojects `x` and `y` are swapped, then this incurs
+the sign `(-1)^(deg(x)*(deg(y)))`.
+
+Moreover, `rg` is linear and can be called with linear combinations of tensors.
+
+Note that for each `Regroup` element `rg`, Julia generates separate, efficient code for computing `rg(t)`.
+
+See also [`swap`](@ref), [`Regroup`](@ref), [`$(@__MODULE__).DefaultCoefftype`](@ref).
+
+# Examples
+
+# Example without degrees
+
+```jldoctest regroup
+julia> rg = regroup(:( (1, (2, 3), 4) ), :( ((3, 1), (4, 2)) ))
+Regroup{(1, (2, 3), 4),((3, 1), (4, 2))}
+
+julia> t = Tensor("x", Tensor("y", "z"), "w")
+x⊗(y⊗z)⊗w
+
+julia> rg(t)
+(z⊗x)⊗(w⊗y)
+```
+
+# Example with degrees
+
+For simplicity, we define the degree of a `String` to be its length.
+```jldoctest regroup
+julia> LinearCombinations.deg(x::String) = length(x)
+
+julia> rg(t)   # same rg and t as before
+-(z⊗x)⊗(w⊗y)
+```
+"""
 function regroup(a, b)
     aa, bb, data = regroup_tuples_data(a, b)
     aa isa Tuple || error("first expression must be a tuple")
@@ -92,6 +153,52 @@ keeps_filtered(::Regroup, ::Type) = true
 
 regroup_inv(a, b) = (regroup(a, b), regroup(b, a))
 
+"""
+    swap(t::Tensor{Tuple{T1,T2}}) where {T1,T2} -> AbstractLinear{Tensor{Tuple{T2,T1}}}
+    swap(a::AbstractLinear{Tensor{Tuple{T1,T2}})}) where {T1,T2}
+        -> AbstractLinear{Tensor{Tuple{T1,T2}})}
+
+This linear function swaps the components of two-component tensors. If the two components
+of a tensor `t` have non-zero degrees, then the usual sign `(-1)^(deg(t[1])*deg(t[2]))` is introduced.
+By default, all terms have zero degree.
+
+Note that `swap` is a special case of `regroup`:  it is simply defined as `regroup(:((1, 2)), :((2, 1)))`.
+
+See also [`Tensor`](@ref), [`deg`](@ref), [`regroup`](@ref), [`$(@__MODULE__).DefaultCoefftype`](@ref).
+
+# Examples
+
+## Examples without degrees
+
+```jldoctest swap
+julia> t = Tensor("x", "z")
+x⊗z
+
+julia> swap(t)
+z⊗x
+
+julia> a = Linear("x" => 1, "yy" => 1) ⊗ Linear("z" => 1, "ww" => 1)
+yy⊗ww+x⊗ww+x⊗z+yy⊗z
+
+julia> swap(a)
+ww⊗yy+z⊗x+z⊗yy+ww⊗x
+
+julia> swap(a; coeff = 2)
+2*ww⊗yy+2*z⊗x+2*z⊗yy+2*ww⊗x
+```
+## Examples with degrees
+
+For simplicity, we define the degree of a `String` to be its length.
+```jldoctest swap
+julia> LinearCombinations.deg(x::String) = length(x)
+
+julia> swap(t)   # same t as before
+-z⊗x
+
+julia> swap(a)   # same a as before
+ww⊗yy-z⊗x+z⊗yy+ww⊗x
+```
+"""
 const swap = regroup(:((1,2)), :((2,1)))
 
 @propagate_inbounds @generated regroup_eval_expr(rg::Regroup, f, g, x) = regroup_get(rg, :expr)
