@@ -510,7 +510,7 @@ where `c` is a scalar. This function modifies `a`.
 
 See also [`addmul`](@ref), [`add!`](@ref), [`sub!`](@ref), [`mul!`](@ref).
 """
-@inline function addmul!(a::AbstractLinear, x, c; is_filtered::Bool = false)
+@inline function addmul!(a::AbstractLinear, x, c = 1; is_filtered::Bool = false)
     if !is_filtered
         linear_filter(x) || return a
         x, c = termcoeff(x => c)
