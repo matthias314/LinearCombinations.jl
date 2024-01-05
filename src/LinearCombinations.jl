@@ -20,4 +20,6 @@ include("tensor.jl")
 include("denselinear.jl")
 include("regroup.jl")
 
+include("helpers.jl")
+
 end

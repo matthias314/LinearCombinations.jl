@@ -296,10 +296,6 @@ end
 
 coeffs(a::DenseLinear) = Iterators.filter(!iszero, a.v)
 
-terms(a::DenseLinear) = Iterators.map(first, a)
-
-in(x, a::DenseLinear) = !iszero(a[x])
-
 function iterate(a::DenseLinear{T,R}, ss...) where {T,R}
     while (iis = iterate(CartesianIndices(a.v), ss...)) !== nothing
         ii, s = iis
@@ -323,13 +319,13 @@ function setcoeff!(a::DenseLinear, c, x)
     @inbounds a.v[i] = c
 end
 
-function modifycoeff!(op, a::DenseLinear, x, c)
+function modifycoeff!(op::AddSub, a::DenseLinear, x, c)
     i = toindex(a.b, unhash(x))
     @inbounds a.v[i] = op(a.v[i], c)
     a
 end
 
-function modifylinear!(op::OP, a::DenseLinear, b::DenseLinear, c = missing) where OP
+function modifylinear!(op::OP, a::DenseLinear, b::DenseLinear, c = missing) where OP <: AddSub
     if a.b !== b.b
         invoke(modifylinear!, Tuple{OP, AbstractLinear,AbstractLinear,Any}, op, a, b, c)
     else

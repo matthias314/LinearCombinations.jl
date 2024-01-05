@@ -5,11 +5,6 @@
 using Base.Broadcast: Broadcasted, BroadcastStyle, DefaultArrayStyle
 import Base.Broadcast: instantiate
 
-const Add = typeof(+)
-const Sub = typeof(-)
-const Mul = typeof(*)
-const AddSub = Union{Add,Sub}
-
 const Tuple1 = Tuple{Any}
 const Tuple2 = Tuple{Any,Any}
 

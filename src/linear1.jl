@@ -72,10 +72,6 @@ function zero!(a::Linear1)
     a
 end
 
-coeffs(a::Linear1) = iszero(a) ? () : (a.c,)
-
-terms(a::Linear1) = iszero(a) ? () : (a.x,)
-
 in(x, a::Linear1) = !iszero(a) && unhash(x) == a.x
 
 iterate(a::Linear1{T,R}) where {T,R} = iszero(a) ? nothing : (Pair{T,R}(a.x, a.c), 2)
@@ -106,7 +102,7 @@ function setcoeff!(a::Linear1{T,R}, c, x) where {T,R}
     c
 end
 
-function modifycoeff!(op, a::Linear1{T,R}, x, c) where {T,R}
+function modifycoeff!(op::AddSub, a::Linear1{T,R}, x, c) where {T,R}
     if iszero(c)
         return a
     elseif x isa Hashed

@@ -58,6 +58,15 @@ end
 promote_typejoin(T...) = foldl(Base.promote_typejoin, T)
 
 #
+# Add and Sub
+#
+
+const Add = typeof(+)
+const Sub = typeof(-)
+const Mul = typeof(*)
+const AddSub = Union{Add,Sub}
+
+#
 # Sign and Zero
 #
 

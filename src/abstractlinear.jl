@@ -87,6 +87,84 @@ function (::Type{L})(itr;
     a
 end
 
+# mandatory AbstractLinear interface
+
+"""
+    zero(::Type{L}; kw...) where L <: AbstractLinear -> L
+    zero(a::L) where L <: AbstractLinear -> L
+
+Return a zero linear combination of type `L`. If `zero` is called with a type `L <: AbstractLinear`
+as argument, then keyword arguments may be accepted or required.
+
+See also [`zero!`](@ref).
+"""
+zero(a::Type{L}) where L <: AbstractLinear = error_missing(typeof(a))
+
+"""
+    $(@__MODULE__).getcoeff(a::AbstractLinear{T,R}, x) where {T,R} -> R
+
+Returns the coefficient of `x` in the linear combination `a`.
+This is `zero(R)` if `x` does not appear in `a`.
+
+This function is part of the `AbstractLinear` interface. When it is called,
+the term `x` has already been transformed via `termcoeff`, and `linear_filter(x)` is `true`.
+
+See also [`$(@__MODULE__).setcoeff!`](@ref), [`linear_filter`](@ref), [`$(@__MODULE__).termcoeff`](@ref).
+"""
+getcoeff(a::AbstractLinear, x) = error_missing(typeof(a))
+
+"""
+    $(@__MODULE__).setcoeff!(a::AbstractLinear{T,R}, c, x) where {T,R} -> c
+
+Set the coefficient of `x` in the linear combination `a` equal to `c` and return `c`.
+
+This function is part of the `AbstractLinear` interface. When it is called,
+both `x` and `c` have already been transformed via `termcoeff`, and `linear_filter(x)` is `true`.
+
+See also [`$(@__MODULE__).getcoeff`](@ref), [`linear_filter`](@ref), [`$(@__MODULE__).termcoeff`](@ref).
+"""
+setcoeff!(a::AbstractLinear, c, x) = error_missing(typeof(a))
+
+"""
+    length(a::AbstractLinear) -> Int
+
+Return the number of non-zero terms in `a`.
+"""
+length(a::AbstractLinear) = error_missing(typeof(a))
+
+"""
+    iterate(a::AbstractLinear [, state])
+
+Iterating over a linear combination yields all non-zero term-coefficient pairs.
+
+# Examples
+```jldoctest
+julia> a = Linear('x' => 1, 'y' => 2, 'z' => 0)
+x+2*y
+
+julia> collect(a)
+2-element Vector{Pair{Char, Int64}}:
+ 'x' => 1
+ 'y' => 2
+
+julia> Linear(x => c^2 for (x, c) in a)
+x+4*y
+```
+"""
+@propagate_inbounds function iterate(a::AbstractLinear{T,R}, state...) where {T,R}
+    # NOTE: we use @inbounds although the user may provide an ivalid state
+    @inbounds xcs = iterate(hashed_iter(a), state...)
+    if xcs === nothing
+        nothing
+    else
+        (x, c), s = xcs
+        (Pair{T,R}(unhash(x), c), s)
+        # "Pair{T,R}" is important for performance
+    end
+end
+
+# additional methods for AbstractLinear with default implementations
+
 linear_type(::Type{L}, ::Type{T}, ::Type{R}) where {L<:AbstractLinear,T,R} = L{T,R}
 linear_type(::Type{L}, ::Type, ::Type{R}) where {T,L<:AbstractLinear{T},R} = L{R}
 
@@ -172,7 +250,7 @@ _coefftype(::T) where T = _coefftype(T)
 
 function ==(a::AbstractLinear, b::AbstractLinear)
     length(a) == length(b) && all(hashed_iter(a)) do (x, c)
-        b[x] == c
+        getcoeff(a, unhash(x)) == c
     end
 end
 
@@ -190,29 +268,24 @@ zero(::T) where T <: AbstractLinear = zero(T)
     zero!(a::AbstractLinear) -> a
 
 Set `a` equal to the zero linear combination and return `a`.
-"""
-function zero! end
 
+See also [`zero`](@ref).
 """
-    length(a::AbstractLinear) -> Int
-
-Return the number of non-zero terms in `a`.
-"""
-length(a::AbstractLinear) = error_missing(typeof(a))
+zero!(a::AbstractLinear) = mul!(a, 0)
 
 """
     coeffs(a::AbstractLinear)
 
 Return an iterator over the non-zero coefficients appearing in `a`.
 """
-function coeffs end
+coeffs(a::AbstractLinear) = (c for (x, c) in a)
 
 """
     terms(a::AbstractLinear)
 
 Return an iterator over the terms appearing in `a` (with a non-zero coefficient).
 """
-function terms end
+terms(a::AbstractLinear) = (x for (x, c) in a)
 
 """
     x in a::AbstractLinear -> Bool
@@ -220,7 +293,7 @@ function terms end
 Return `true` if the term `x` appears in the linear combination `a`
 with a non-zero coefficient, and `false` otherwise.
 """
-in(x, a::AbstractLinear) = error_missing(typeof(a))
+in(x, a::AbstractLinear) = !iszero(a[unhash(x)])
 
 """
     mul!(a::AbstractLinear, c) -> a
@@ -229,7 +302,12 @@ Multiply `a` by the scalar `c`. This functions modifies `a`.
 
 See also [`addmul!`](@ref).
 """
-function mul! end
+function mul!(a::AbstractLinear, c)
+    for (x, d) in a
+        setcoeff!(a, c*d, x)
+    end
+    a
+end
 
 """
     $(@__MODULE__).termcoeff(xc::Pair) -> Pair
@@ -337,37 +415,6 @@ hashed_iter(a) = a
 # we also apply this function to iterators that are not <: AbstractLinear
 
 """
-    iterate(a::AbstractLinear [, state])
-
-Iterating over a linear combination yields all non-zero term-coefficient pairs.
-
-# Examples
-```jldoctest
-julia> a = Linear('x' => 1, 'y' => 2, 'z' => 0)
-x+2*y
-
-julia> collect(a)
-2-element Vector{Pair{Char, Int64}}:
- 'x' => 1
- 'y' => 2
-
-julia> Linear(x => c^2 for (x, c) in a)
-x+4*y
-```
-"""
-@propagate_inbounds function iterate(a::AbstractLinear{T,R}, state...) where {T,R}
-    # NOTE: we use @inbounds although the user may provide an ivalid state
-    @inbounds xcs = iterate(hashed_iter(a), state...)
-    if xcs === nothing
-        nothing
-    else
-        (x, c), s = xcs
-        (Pair{T,R}(unhash(x), c), s)
-        # "Pair{T,R}" is important for performance
-    end
-end
-
-"""
     sizehint!(a::AbstractLinear, n::Integer) -> a
 
 Try to make room for in total `n` non-zero term-coefficient pairs in the linear combination `a`.
@@ -415,40 +462,37 @@ function getindex(a::AbstractLinear{T,R}, x) where {T,R}
     linear_filter(y) ? inv(c)*getcoeff(a, y) : zero(R)
 end
 
-"""
-    $(@__MODULE__).getcoeff(a::AbstractLinear{T,R}, x) where {T,R} -> R
-
-Returns the coefficient of `x` in the linear combination `a`.
-This is `zero(R)` if `x` does not appear in `a`.
-
-This function is part of the `AbstractLinear` interface. When it is called,
-the term `x` has already been transformed via `termcoeff`, and `linear_filter(x)` is `true`.
-
-See also [`$(@__MODULE__).setcoeff!`](@ref), [`linear_filter`](@ref), [`$(@__MODULE__).termcoeff`](@ref).
-"""
-getcoeff(a::AbstractLinear, x) = error_missing(typeof(a))
-
-"""
-    $(@__MODULE__).setcoeff!(a::AbstractLinear{T,R}, c, x) where {T,R} -> c
-
-Set the coefficient of `x` in the linear combination `a` equal to `c` and return `c`.
-
-This function is part of the `AbstractLinear` interface. When it is called,
-both `x` and `c` have already been transformed via `termcoeff`, and `linear_filter(x)` is `true`.
-
-See also [`$(@__MODULE__).getcoeff`](@ref), [`linear_filter`](@ref), [`$(@__MODULE__).termcoeff`](@ref).
-"""
-setcoeff!(a::AbstractLinear, c, x) = error_missing(typeof(a))
-
 function setindex!(a::AbstractLinear{T,R}, c, x) where {T,R}
     y, d = termcoeff(x => c)
     linear_filter(y) && setcoeff!(a, d, y)
     c
 end
 
-modifycoeff!(op, a::AbstractLinear{T}, x, c) where T = modifycoeff!(op, a, Hashed{T}(x), c)
+"""
+    $(@__MODULE__).modifycoeff!(op, a::AbstractLinear, x, c) -> a
 
-function modifylinear!(op::F, a::AbstractLinear, b::AbstractLinear, c = missing) where F
+Replace the coefficient of `x` in `a` by `op(getcoeff(a, x), c)` and return `a`.
+Here `op` is either `+` or `-`.
+
+This function is called after `termcoeff` and `linear_filter`.
+
+See also [`linear_filter`](@ref), [`$(@__MODULE__).termcoeff`](@ref), [`$(@__MODULE__).modifylinear!`](@ref).
+"""
+function modifycoeff!(op::AddSub, a::AbstractLinear, x, c)
+    x = unhash(x)
+    setcoeff!(a, op(getcoeff(a, x), c), x)
+end
+
+"""
+    $(@__MODULE__).modifylinear!(op, a::AbstractLinear, b::AbstractLinear, c = missing) -> a
+
+If `op` is `+`, add `c*b` to `a`, or just `b` if `c` is missing.
+If `op` is `-`, subtract `b` or `c*b` from `a`.
+Store the new value in `a` and return it.
+
+See also [`$(@__MODULE__).modifycoeff!`](@ref).
+"""
+function modifylinear!(op::F, a::AbstractLinear, b::AbstractLinear, c = missing) where F <: AddSub
 # TODO: is this dangerous if a === b?
     sizehint!(a, length(a) + length(b))
     @inbounds for (x, d) in hashed_iter(b)
@@ -533,6 +577,13 @@ function copyto!(a::AbstractLinear, b, c = ONE)
 # b can be of type AbstractLinear or some term
     a === b ? mul!(a, c) : addmul!(zero!(a), b, c)
 end
+
+"""
+    copy(a::L) where L <: AbstractLinear -> L
+
+Return a copy of `a`.
+"""
+copy(a::L) where L <: AbstractLinear = L(xc for xc in a)
 
 function +(as::AbstractLinear...)
     T = promote_typejoin(map(termtype, as)...)

@@ -73,8 +73,9 @@ function setcoeff!(a::Linear{T,R}, c, x) where {T,R}
     c
 end
 
-function modifycoeff!(op, a::Linear{T,R}, x::Hashed, c) where {T,R}
+function modifycoeff!(op::AddSub, a::Linear{T,R}, x, c) where {T,R}
 # function modifycoeff!(op, a::Linear{T,R}, @nospecialize(x::Hashed), c) where {T,R}
+    x = Hashed{T}(x)
     ht = a.ht
     i = Base.ht_keyindex2!(ht, x)
     local v::R
