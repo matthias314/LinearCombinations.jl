@@ -177,7 +177,8 @@ tensor_mul_signexp(m, f1::Tuple, f2::Tuple) =
 function *(t1::Tensor{<:Tuple{Vararg{Any,n}}}, t2::Tensor{<:Tuple{Vararg{Any,n}}};
         coefftype = begin
             TT = mul_rt_tensor(factors(t1), factors(t2))
-            promote_type(Int, map(_coefftype, TT)...)
+            R = promote_type(Sign, map(_coefftype, TT)...)
+            R == Sign ? DefaultCoefftype : R
         end,
         addto = begin
             TT = mul_rt_tensor(factors(t1), factors(t2))
@@ -205,7 +206,8 @@ one(::T) where T <: Tensor = one(T)
 # TODO: use some multilinear function instead of "tensor" + reordering
         coefftype = begin
             TT = map(typeof, factors(t))
-            promote_type(Sign, map(Fix1(linear_extension_coeff_type, coprod), TT)...)
+            R = promote_type(Sign, map(Fix1(linear_extension_coeff_type, coprod), TT)...)
+            R == Sign ? DefaultCoefftype : R
         end,
         addto = zero(Linear{Tensor{Tuple{T,T}},unval(coefftype)}),
         coeff = ONE,
@@ -559,7 +561,8 @@ end
 function diff_coeff_type(T...)
     RD = map(Fix1(linear_extension_coeff_type, diff), T)
     RS = map(Fix1(sign_type ∘ return_type, deg), T)
-    promote_type(Int, RD..., RS...)
+    R = promote_type(Sign, RD..., RS...)
+    R == Sign ? DefaultCoefftype : R
 end
 
 tensor_diff(addto::AbstractLinear{T,R}, coeff, e, t1, t0::Tuple{}) where {T,R} = nothing
