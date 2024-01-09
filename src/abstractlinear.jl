@@ -209,11 +209,7 @@ termtype(::Type{<:AbstractLinear{T,R}}) where {T,R} = T
 termtype(::L) where L <: AbstractLinear = termtype(L)
 
 function _termtype(::Type{T}) where T
-    if T isa Union
-        promote_typejoin(_termtype(T.a), _termtype(T.a))
-    else
-        T
-    end
+    T isa Union ? Union{_termtype(T.a), _termtype(T.b)} : T
 end
 
 _termtype(::Type{<:AbstractLinear{T,R}}) where {T,R} = T
