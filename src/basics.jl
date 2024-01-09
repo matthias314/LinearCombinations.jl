@@ -57,6 +57,8 @@ end
 
 promote_typejoin(T...) = foldl(Base.promote_typejoin, T)
 
+push_kw(nt; kw...) = (; nt..., kw...)
+
 #
 # Add and Sub
 #

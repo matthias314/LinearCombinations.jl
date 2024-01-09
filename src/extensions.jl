@@ -302,19 +302,18 @@ macro linear(f)
                 ;
             elseif return_type($F, T) <: AbstractLinear
                 has_ac = has_addto_coeff($F, T)
-                # has_ac || println($F, ": ", T)
-                new_kw = kw
+                fkw = kw
                 if has_isfiltered($F, T)
-                    new_kw = (; is_filtered = true, new_kw...)
+                    fkw = push_kw(fkw; is_filtered = true)
                 end
                 if has_sizehint($F, T)
-                    new_kw = (; sizehint, new_kw...)
+                    fkw = push_kw(fkw; sizehint)
                 end
                 for (x, c) in a
                     if has_ac
-                        $F(x; addto, coeff = coeff*c, new_kw...)
+                        $F(x; addto, coeff = coeff*c, fkw...)
                     else
-                        addmul!(addto, $F(x; new_kw...), coeff*c)
+                        addmul!(addto, $F(x; fkw...), coeff*c)
                     end
                 end
             else
@@ -439,12 +438,12 @@ _length(a::AbstractLinear) = length(a)
     quote
         is_filtered || all(linear_filter, a) || return addto
         has_ac = has_addto_coeff(f, $TS...)
-        new_kw = kw
+        fkw = kw
         if has_isfiltered(f, $TS...)
-            new_kw = (; is_filtered = true, new_kw...)
+            fkw = push_kw(fkw; is_filtered = true)
         end
         if has_sizehint(f, $TS...)
-            new_kw = (; sizehint, new_kw...)
+            fkw = push_kw(fkw; sizehint)
         elseif sizehint # && !(return_type(f, $TS...) <: AbstractLinear)
             l = prod(_length, a; init = 1)
             sizehint!(addto, length(addto)+l)
@@ -456,9 +455,9 @@ _length(a::AbstractLinear) = length(a)
         end, begin
             if has_ac # || return_type(f, $TS...) <: AbstractLinear
                 # has_ac || println("$f: ", $TS)
-                @ncallkw($N, f, (addto, coeff = cc_1, new_kw...), x)
+                @ncallkw($N, f, (addto, coeff = cc_1, fkw...), x)
             else
-                addmul!(addto, @ncallkw($N, f, new_kw, x), cc_1; is_filtered = keeps_filtered(f, $TS...))
+                addmul!(addto, @ncallkw($N, f, fkw, x), cc_1; is_filtered = keeps_filtered(f, $TS...))
             end
         end)
         addto
@@ -597,12 +596,12 @@ macro multilinear_noesc(f, f0 = f)
                 # TT = $TT
                 is_filtered || all($linear_filter, a) || return addto
                 has_ac = $has_addto_coeff($$F0, $TT...)
-                new_kw = kw
+                fkw = kw
                 if $has_isfiltered($$F0, $TT...)
-                    new_kw = (; is_filtered = true, new_kw...)
+                    fkw = push_kw(fkw; is_filtered)
                 end
                 if $has_sizehint($$F0, $TT...)
-                    new_kw = (; sizehint, new_kw...)
+                    fkw = push_kw(fkw; sizehint)
                 elseif sizehint # && !(return_type(f, $TT...) <: AbstractLinear)
                     l = prod($_length, a; init = 1)
                     sizehint!(addto, length(addto)+l)
@@ -613,9 +612,9 @@ macro multilinear_noesc(f, f0 = f)
                     cc_i = c_i*cc_{i+1}
                 end, begin
                     if has_ac   # || return_type(f, $TT...) <: AbstractLinear   # for testing
-                        $$(@__MODULE__).@ncallkw($N, $$F0, (addto, coeff = cc_1, new_kw...), x)
+                        $$(@__MODULE__).@ncallkw($N, $$F0, (addto, coeff = cc_1, fkw...), x)
                     else
-                        $addmul!(addto, $$(@__MODULE__).@ncallkw($N, $$F0, new_kw, x), cc_1; is_filtered = $keeps_filtered($$F0, $TT...))
+                        $addmul!(addto, $$(@__MODULE__).@ncallkw($N, $$F0, fkw, x), cc_1; is_filtered = $keeps_filtered($$F0, $TT...))
                     end
                 end)
                 addto
