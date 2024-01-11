@@ -1,4 +1,71 @@
 #
+# AbstractTensor
+#
+
+export AbstractTensor
+
+using StructEqualHash: typehash
+
+abstract type AbstractTensor{T<:Tuple} end
+
+(::Type{T})(x...) where T <: AbstractTensor = T(x)
+
+factors(t::T) where T <: AbstractTensor = error_missing(T)
+
+==(t1::AbstractTensor, t2::AbstractTensor) = factors(t1) == factors(t2)
+
+Base.hash(t::AbstractTensor, h::UInt) = hash((factors(t),), typehash(AbstractTensor, h))
+
+length(t::AbstractTensor) = length(factors(t))
+
+firstindex(t::AbstractTensor) = 1
+lastindex(t::AbstractTensor) = length(t)
+
+iterate(t::AbstractTensor, state...) = iterate(factors(t), state...)
+
+@propagate_inbounds getindex(t::AbstractTensor, k) = factors(t)[k]
+
+function show(io::IO, t::AbstractTensor)
+    if isempty(t)
+        print(io, "()")
+    else
+        join(io, (x isa AbstractTensor && !isempty(x) ? "($x)" : x for x in t), '⊗')
+    end
+end
+
+copy(t::AbstractTensor) = t
+
+convert(::Type{T}, t::AbstractTensor) where T <: AbstractTensor = T(factors(t))
+
+deg(t::AbstractTensor) = sum0(deg, factors(t))
+# type inference doesn't work without "factors"
+
+# factor_types(::Type{T}) where T <: AbstractTensor = return_type(factors, T).parameters
+factor_types(::Type{T}) where T <: AbstractTensor = (T.parameters[1].parameters...,)
+
+#=
+deg_return_type_tensor(R, T...) = promote_type(R, map(Fix1(return_type, deg), T)...)
+
+# TODO: needed?
+return_type(::typeof(deg), ::Type{T}) where T <: AbstractTensor =
+    deg_return_type_tensor(Int, factor_types(T)...)
+=#
+
+_degsums(dt) = dt
+_degsums(dt, t...) = _degsums((deg(t[end])+dt[1], dt...), t[1:end-1]...)
+
+degsums(::Tuple{}) = ()
+degsums(t::Tuple) = _degsums((Zero(),), t[2:end]...)
+
+degsums(t::AbstractTensor) = degsums(factors(t))
+
+linear_filter(t::AbstractTensor) = all(linear_filter, t)
+
+keeps_filtered(::Type{<:AbstractTensor}, T::Type...) = true
+
+@linear_broadcastable AbstractTensor
+
+#
 # Tensor datatype
 #
 
@@ -74,55 +141,10 @@ julia> a = tensor(); a[Tensor()]
 1
 ```
 """
-struct Tensor{T<:Tuple}
+struct Tensor{T<:Tuple} <: AbstractTensor{T}
     a::T
 end
-
-Tensor{T}(x...) where T <: Tuple = Tensor{T}(x)
-Tensor(x...) = Tensor(x)
-
-@linear_broadcastable(Tensor)
-
 factors(t::Tensor) = t.a
-
-length(t::Tensor) = length(factors(t))
-
-firstindex(t::Tensor) = 1
-lastindex(t::Tensor) = length(t)
-
-iterate(t::Tensor, state...) = iterate(factors(t), state...)
-
-@propagate_inbounds getindex(t::Tensor, k) = factors(t)[k]
-
-function show(io::IO, t::Tensor)
-    if isempty(t)
-        print(io, "()")
-    else
-        join(io, (x isa Tensor && !isempty(x) ? "($x)" : x for x in t), '⊗')
-    end
-end
-
-# ==(t::Tensor, u::Tensor) = factors(t) == factors(u)
-# hash(t::Tensor, h::UInt) = hash(factors(t), h)
-
-# @struct_equal_hash Tensor{T} where T
-@struct_equal_hash Tensor
-
-copy(t::Tensor) = t
-
-convert(::Type{T}, t::Tensor) where T <: Tensor = T(factors(t))
-
-deg(t::Tensor) = sum0(deg, factors(t))
-# type inference doesn't work without "factors"
-
-deg_return_type_tensor(R, T...) = promote_type(R, map(Fix1(return_type, deg), T)...)
-
-return_type(::typeof(deg), ::Type{Tensor{T}}) where T <: Tuple =
-    deg_return_type_tensor(Int, T.parameters...)
-
-linear_filter(t::Tensor) = all(linear_filter, t)
-
-keeps_filtered(::Type{Tensor}, T::Type...) = true
 
 const Tensor_func = @Function(Tensor)
 keeps_filtered(::typeof(Tensor_func), T::Type...) = keeps_filtered(Tensor, T...)
@@ -164,6 +186,21 @@ function tensor end
 const ⊗ = tensor
 # or define it the other way around?
 
+Base.@assume_effects :total function tensor_return_type(T...)
+    # T = map(typeof, x)
+    RR = map(_coefftype, T)
+    UU = map(_termtype, T)
+    R = promote_type(Sign, RR...)
+    if R == Sign
+        R = DefaultCoefftype
+    end
+    if all(isconcretetype, UU)
+        Linear{Tensor{Tuple{UU...}},R}
+    else
+        Linear{Tensor{T} where T<:Tuple{UU...},R}
+    end
+end
+
 # multiplication of tensors
 
 mul_rt_tensor(t1::Tuple{}, t2::Tuple{}, T...) = T
@@ -174,7 +211,7 @@ tensor_mul_signexp(m, ::Tuple{}, ::Tuple{}) = m
 tensor_mul_signexp(m, f1::Tuple, f2::Tuple) =
     tensor_mul_signexp(m + deg(f2[1])*sum0(deg, f1[2:end]), f1[2:end], f2[2:end])
 
-function *(t1::Tensor{<:Tuple{Vararg{Any,n}}}, t2::Tensor{<:Tuple{Vararg{Any,n}}};
+function *(t1::AbstractTensor, t2::AbstractTensor;
         coefftype = begin
             TT = mul_rt_tensor(factors(t1), factors(t2))
             R = promote_type(Sign, map(_coefftype, TT)...)
@@ -185,7 +222,8 @@ function *(t1::Tensor{<:Tuple{Vararg{Any,n}}}, t2::Tensor{<:Tuple{Vararg{Any,n}}
             zero(Linear{Tensor{Tuple{map(_termtype, TT)...}},unval(coefftype)})
         end,
         coeff = ONE,
-        is_filtered = false) where n
+        is_filtered = false)
+    length(t1) == length(t2) || error("argument tensors must have the same length")
     f1 = factors(t1)
     f2 = factors(t2)
     m = tensor_mul_signexp(Zero(), f1, f2)
@@ -193,12 +231,12 @@ function *(t1::Tensor{<:Tuple{Vararg{Any,n}}}, t2::Tensor{<:Tuple{Vararg{Any,n}}
     # TODO: does "is_filtered" make sense here?
 end
 
-function one(::Type{Tensor{T}}) where T
-    TT = T.parameters
+function one(::Type{T}) where T <: AbstractTensor
+    TT = factor_types(T)
     Tensor(ntuple(i -> one(TT[i]), length(TT)))
 end
 
-one(::T) where T <: Tensor = one(T)
+one(::T) where T <: AbstractTensor = one(T)
 
 # coproduct of tensors
 
@@ -211,7 +249,7 @@ one(::T) where T <: Tensor = one(T)
         end,
         addto = zero(Linear{Tensor{Tuple{T,T}},unval(coefftype)}),
         coeff = ONE,
-        is_filtered = false) where T <: Tensor
+        is_filtered = false) where T <: AbstractTensor
     n = length(t)
     for (tt, c) in tensor(map(coprod, factors(t))...)
         f1 = ntuple(i -> tt[i][1], n)
@@ -330,11 +368,11 @@ end
 
 show(io::IO, g::TensorSplat) = print(io, "TensorSplat($(repr(g.f)))")
 
-(g::TensorSplat)(x::Tensor; kw...) = g.f(factors(x)...; kw...)
+(g::TensorSplat)(x::AbstractTensor; kw...) = g.f(factors(x)...; kw...)
 
 @linear g::TensorSplat
 
-hastrait(g::TensorSplat, prop::Val, T::Type{<:Tensor}) = hastrait(g.f, prop, T.parameters[1].parameters...)
+hastrait(g::TensorSplat, prop::Val, ::Type{T}) where T <: AbstractTensor = hastrait(g.f, prop, factor_types(T)...)
 
 deg(g::TensorSplat) = deg(g.f)
 
@@ -350,7 +388,7 @@ _cat(x, y, z...) = _cat((x..., y...), z...)
 @multilinear cat
 
 """
-    cat(t::Tensor...) -> Tensor
+    cat(t::AbstractTensor...) -> Tensor
 
 Concatenate the tensors given as arguments. This function is multilinear.
 
@@ -363,19 +401,19 @@ julia> LinearCombinations.cat(Tensor('x'), Tensor('y', Tensor('z', 'w')))
 x⊗y⊗(z⊗w)
 ```
 """
-cat(t::Tensor...) = Tensor(_cat(t...))
+cat(t::AbstractTensor...) = Tensor(_cat(t...))
 
 # TODO: add keeps_filtered?
 
 _flatten(x) = (x,)
-_flatten(x::Tensor) = _cat(map(_flatten, factors(x))...)
+_flatten(x::AbstractTensor) = _cat(map(_flatten, factors(x))...)
 
 @linear flatten
 # no keywords
 
 """
-    flatten(t::Tensor) -> Tensor
-    flatten(a::AbstractLinear{Tensor}) -> AbstractLinear{Tensor}
+    flatten(t::AbstractTensor) -> Tensor
+    flatten(a::AbstractLinear{<:AbstractTensor}) -> AbstractLinear{Tensor}
 
 Recursively take all tensor components and concatenate the result.
 This function is linear.
@@ -392,9 +430,9 @@ julia> flatten(t)
 x⊗y⊗z⊗w
 ```
 """
-flatten(t::Tensor) = Tensor(_flatten(t))
+flatten(t::AbstractTensor) = Tensor(_flatten(t))
 
-keeps_filtered(::typeof(flatten), ::Type{Tensor}) = true
+keeps_filtered(::typeof(flatten), ::Type{<:AbstractTensor}) = true
 
 
 #
@@ -403,7 +441,7 @@ keeps_filtered(::typeof(flatten), ::Type{Tensor}) = true
 
 export tensormap
 
-struct TensorMap{T<:Tuple,DS<:Tuple}
+struct TensorMap{T<:Tuple,DS<:Tuple} <: AbstractTensor{T}
     ff::T
     degsums::DS
 end
@@ -474,74 +512,66 @@ julia> j(b)
 ```
 """
 function tensormap(ff...)
-    # ff = Tuple(itr)
-    degs = map(deg, ff)
-    degsums = ntuple(k -> sum0(degs[k+1:end]), length(ff))
-    TensorMap(ff, degsums)
+    TensorMap(ff, degsums(ff))
 end
 
 factors(f::TensorMap) = f.ff
 
-length(f::TensorMap) = length(factors(f))
-
-firstindex(f::TensorMap) = 1
-lastindex(f::TensorMap) = length(f)
-
-iterate(f::TensorMap, state...) = iterate(factors(f), state...)
-
-@propagate_inbounds getindex(f::TensorMap, k) = factors(f)[k]
-
-function show(io::IO, f::TensorMap)
-    if isempty(f)
-        print(io, "()")
-    else
-        join(io, (x isa TensorMap && !isempty(x) ? "($(repr(x)))" : repr(x) for x in f), '⊗')
-    end
-end
+degsums(f::TensorMap) = f.degsums
 
 function deg(g::TensorMap)
     isempty(g) ? Zero() : deg(g[1])+g.degsums[1]
 end
 
-@linear_kw function (g::TensorMap)(t::Tensor;
-        coefftype = begin
-            RR = ntuple(i -> linear_extension_coeff_type(g[i], typeof(t[i])), length(g))
-            R = promote_type(Sign, RR...)
-            R == Sign ? DefaultCoefftype : R
-        end,
-        addto = begin
-            TT = ntuple(i -> linear_extension_term_type(g[i], typeof(t[i])), length(g))
-            zero(Linear{Tensor{Tuple{TT...}},unval(coefftype)})
-        end,
-        coeff = ONE, is_filtered = false, sizehint = true, kw...)
-    n = length(g)
-    length(t) == n || error("wrong number of tensor factors")  # TODO: earlier
-    is_filtered || all(linear_filter, t) || return addto
-    R = _coefftype(addto)
-    if has_char2(R)
-        # TODO: change from R to ZZ2
-        gt = ntuple(n) do i
-            T = typeof(t[i])
-            if has_char2(R) && has_coefftype(g[i], T)
-                # g[i](t[i]; coefftype = Val(promote_type(linear_extension_coeff_type(g[i], T), ZZ2)))
-                g[i](t[i]; coefftype = Val(R))
-            else
-                g[i](t[i])
-            end
-        end
-        c = coeff
-    else
-        gt = ntuple(i -> g[i](t[i]), n)
-        ds = g.degsums
-        m = sum0(ntuple(i -> ds[i]*deg(t[i]), n))
-        c = signed(m, coeff)
-    end
-    is_filtered = all(ntuple(i -> gt[i] isa Linear || keeps_filtered(g[i], typeof(t[i])), n))
-    tensor(gt...; addto, coeff = c, is_filtered, sizehint, kw...)
-    addto
-end
+# evaluation of AbstractTensor
 
-@linear g::TensorMap
+@linear tf::AbstractTensor
+
+@linear_kw function (tf::AbstractTensor)(tx::AbstractTensor;
+        coefftype = missing,
+        addto = missing,
+        coeff = ONE,
+        is_filtered::Bool = false,
+        sizehint::Bool = true,
+        kw...)
+    n = length(tf)
+    n == length(tx) || error("wrong number of tensor factors")
+
+    kwt = kw
+    if addto !== missing
+        hc2 = has_char2(_coefftype(addto))
+        kwt = push_kw(kwt; addto)
+    elseif coefftype !== missing
+        hc2 = has_char2(unval(coefftype))
+        kwt = push_kw(kwt; coefftype)
+    else
+        hc2 = false
+    end
+
+    if !hc2
+        dfs = degsums(tf)
+        dx = map(deg, factors(tx))
+        m = sum0(splat(*), zip(dfs, dx))
+        coeff = signed(m, coeff)
+    end
+
+    tfx = ntuple(n) do i
+        kwi = kw
+        if has_isfiltered(tf[i], typeof(tx[i]))
+            kwi = push_kw(kwi; is_filtered = true)
+        end
+        if has_sizehint(tf[i], typeof(tx[i]))
+            kwi = push_kw(kwi; sizehint)
+        end
+        tf[i](tx[i]; kwi...)
+    end
+
+    is_filtered = is_filtered && all(ntuple(n) do i
+            tx[i] isa AbstractLinear || keeps_filtered(tf[i], typeof(tx[i]))
+        end)
+
+    tensor(tfx...; coeff, is_filtered, kwt...)
+end
 
 #=
 # TODO: this poses problems with inference
@@ -597,7 +627,7 @@ end
         # TODO: this should be coefftype::Type{R} and "R" being used in the next line
         addto = zero(Linear{T,coefftype}),
         coeff = ONE,
-        is_filtered = false) where T <: Tensor
+        is_filtered = false) where T <: AbstractTensor
     if !iszero(coeff) && (is_filtered || linear_filter(t))
         tensor_diff(addto, coeff, Zero(), (), factors(t))
     end

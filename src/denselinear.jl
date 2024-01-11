@@ -185,9 +185,9 @@ end
 
 @propagate_inbounds getindex(b::TensorBasis{T,N}, ii::Vararg{Int,N}) where {T,N} = _tobasis(b.bases, ii)
 
-in(t::Tensor, b::TensorBasis) = all(splat(in), zip(t, b.bases))
+in(t::AbstractTensor, b::TensorBasis) = all(splat(in), zip(t, b.bases))
 
-function toindex(b::TensorBasis{T}, t::U) where {T,U<:T}
+function toindex(b::TensorBasis{T}, t::AbstractTensor) where T
     length(b.bases) == length(t) || error("TensorBasis and Tensor arguments must have the same length")
     CartesianIndex(ntuple(k -> toindex(b.bases[k], t[k]), length(b.bases)))
 end

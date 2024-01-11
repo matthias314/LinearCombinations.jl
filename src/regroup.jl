@@ -154,8 +154,8 @@ keeps_filtered(::Regroup, ::Type) = true
 regroup_inv(a, b) = (regroup(a, b), regroup(b, a))
 
 """
-    swap(t::Tensor{Tuple{T1,T2}}) where {T1,T2} -> AbstractLinear{Tensor{Tuple{T2,T1}}}
-    swap(a::AbstractLinear{Tensor{Tuple{T1,T2}})}) where {T1,T2}
+    swap(t::AbstractTensor{Tuple{T1,T2}}) where {T1,T2} -> AbstractLinear{Tensor{Tuple{T2,T1}}}
+    swap(a::AbstractLinear{AbstractTensor{Tuple{T1,T2}})}) where {T1,T2}
         -> AbstractLinear{Tensor{Tuple{T1,T2}})}
 
 This linear function swaps the components of two-component tensors. If the two components
@@ -208,28 +208,14 @@ const swap = regroup(:((1,2)), :((2,1)))
 #
 
 _length(::Type{T}) where T <: Tuple = length(T.parameters)
-_length(::Type{T}) where T <: Tensor = @inbounds _length(T.parameters[1])
+_length(::Type{T}) where T <: AbstractTensor = length(factor_types(T))
 
 _getindex(x) = x
 @propagate_inbounds _getindex(x, i) = x[i]
 @propagate_inbounds _getindex(x, i, ii...) = _getindex(_getindex(x, i), ii...)
 
 @propagate_inbounds _getindex(::Type{T}, i) where T <: Tuple = T.parameters[i]
-@propagate_inbounds _getindex(::Type{T}, i) where T <: Tensor = _getindex(T.parameters[1], i)
-
-build_tensor_type(T...) = Tensor{Tuple{T...}}
-
-function regroup_tensor_coeff_type(T...)
-    RS = map(Fix1(sign_type ∘ return_type, deg), T)
-    R = promote_type(Sign, RS...)
-    R == Sign ? DefaultCoefftype : R
-end
-
-function regroup_tensor_type(rg::Regroup, ::Type{T}, coefftype, ::Val{isunionall} = Val(false)) where {T<:Tensor,isunionall}
-    U = regroup_eval_expr(rg, _getindex, build_tensor_type, T)
-    W = isunionall ? Tensor{<:U.parameters[1]} : U
-    Linear1{W,coefftype}
-end
+@propagate_inbounds _getindex(::Type{T}, i) where T <: AbstractTensor = _getindex(factor_types(T), i)
 
 regroup_check_arg(::Type, ::Type, ::Type) = true
 
@@ -250,28 +236,40 @@ Base.@assume_effects :foldable :nothrow @generated function regroup_tensor_signe
     end
 end
 
-@linear_kw function (rg::Regroup{A})(x::T;
-        coefftype = begin
-                regroup_check_arg(Tensor, typeof(A), T) ||
-                    error("argument type $(typeof(x)) does not match first Regroup parameter $A")
-                regroup_tensor_coeff_type(map(typeof, factors(x))...)
-            end,
-        addto = begin
-                regroup_check_arg(Tensor, typeof(A), T) ||
-                    error("argument type $(typeof(x)) does not match first Regroup parameter $A")
-                zero(regroup_tensor_type(rg, T, unval(coefftype)))
-            end,
+@inline regroup_sign(rg, x, c) = signed(regroup_tensor_signexp(rg, deg ∘ _getindex, x), c)
+
+@inline regroup_term(rg, x) = regroup_eval_expr(rg, _getindex, Tensor, x)
+
+@linear_kw function (rg::Regroup{A,B})(x::T;
+        coefftype = missing,
+        addto = missing,
         coeff = ONE,
-        is_filtered::Bool = false) where {A,T<:Tensor}
-    regroup_check_arg(Tensor, typeof(A), T) ||
-        error("argument type $(typeof(x)) does not match first Regroup parameter $A")
-    addmul!(addto, regroup_eval_expr(rg, _getindex, Tensor, x),
-            signed(regroup_tensor_signexp(rg, deg ∘ _getindex, x), coeff); is_filtered)
-        # @inbounds has no effect for building the tensor or computing the sign
-        # because we access tuples at (after code generation) fixed indices
+        is_filtered::Bool = false) where {A,B,T<:AbstractTensor}
+    regroup_check_arg(AbstractTensor, typeof(A), T) ||
+        error("argument type $T does not match first Regroup parameter $A")
+
+    if addto !== missing
+        R = _coefftype(addto)
+    elseif coefftype !== missing
+        R = unval(coefftype)
+    else
+        R = DefaultCoefftype
+    end
+
+    if !has_char2(R)
+        coeff = regroup_sign(rg, x, coeff)
+    end
+    y = regroup_term(rg, x)
+
+    if addto !== missing
+        addmul!(addto, y, coeff)
+    else
+        Linear1{typeof(y),R}(y => coeff)
+    end
 end
 
-function return_type(rg::Regroup, ::Type{T}) where T <: Tensor
-    U = T isa UnionAll ? T.var.ub : T.parameters[1]
-    regroup_tensor_type(rg, Tensor{U}, regroup_tensor_coeff_type(U.parameters...), Val(true))
+function return_type(rg::RG, ::Type{T}) where {RG<:Regroup,T<:AbstractTensor}
+    R = return_type(regroup_sign, RG, T, DefaultCoefftype)
+    U = return_type(regroup_term, RG, T)
+    Linear1{U,R}
 end
