@@ -187,7 +187,7 @@ macro linear_kw(ex)
     end
     :addto in kwnames && :coeff in kwnames && push!(traits, :addto_coeff)
     isempty(traits) || addtraits!(traitex, def, traits)
-    esc(:($traitex; $ex))
+    esc(:($traitex; Base.@__doc__ $ex))
 end
 
 linear_extension_coeff_type(f, types...) = _coefftype(return_type(f, types...))
