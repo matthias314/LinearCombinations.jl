@@ -231,12 +231,12 @@ Base.@assume_effects :foldable :nothrow @generated function regroup_tensor_signe
     perm = regroup_get(rg, :perm)
     invdeg = (:(degs[$i]*degs[$j]) for j in 2:length(perm) for i in 1:j-1 if perm[i] > perm[j])
     quote
-        degs = $args
+        degs = map(deg, $args)
         sum0(($(invdeg...),))
     end
 end
 
-@inline regroup_sign(rg, x, c) = signed(regroup_tensor_signexp(rg, deg ∘ _getindex, x), c)
+@inline regroup_sign(rg, x, c) = signed(regroup_tensor_signexp(rg, _getindex, x), c)
 
 @inline regroup_term(rg, x) = regroup_eval_expr(rg, _getindex, Tensor, x)
 
@@ -272,8 +272,10 @@ end
     end
 end
 
+#=
 function return_type(rg::RG, ::Type{T}) where {RG<:Regroup,T<:AbstractTensor}
     R = return_type(regroup_sign, RG, T, DefaultCoefftype)
     U = return_type(regroup_term, RG, T)
     Linear1{U,R}
 end
+=#

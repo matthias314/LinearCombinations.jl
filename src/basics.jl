@@ -200,6 +200,9 @@ signed(k, x::R) where R = has_char2(R) || iseven(k) ? x : -x
 sum0(itr) = sum(itr; init = Zero())
 sum0(f, itr) = sum(f, itr; init = Zero())
 
+sum0(::Tuple{}) = Zero()
+sum0(x::Tuple) = x[1] + sum0(x[2:end])
+
 #
 # Hashed datatype
 #
