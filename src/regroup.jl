@@ -243,7 +243,7 @@ end
 @linear_kw function (rg::Regroup{A,B})(x::T;
         coefftype = missing,
         addto = missing,
-        coeff = ONE,
+        coeff = one(DefaultCoefftype),
         is_filtered::Bool = false) where {A,B,T<:AbstractTensor}
     regroup_check_arg(AbstractTensor, typeof(A), T) ||
         error("argument type $T does not match first Regroup parameter $A")
@@ -253,18 +253,22 @@ end
     elseif coefftype !== missing
         R = unval(coefftype)
     else
-        R = DefaultCoefftype
+        R = missing
     end
 
-    if !has_char2(R)
+    if R === missing || !has_char2(R)
         coeff = regroup_sign(rg, x, coeff)
     end
+    if R === missing
+        R = typeof(coeff)
+    end
+
     y = regroup_term(rg, x)
 
     if addto !== missing
-        addmul!(addto, y, coeff)
+        addmul!(addto, y, coeff; is_filtered)
     else
-        Linear1{typeof(y),R}(y => coeff)
+        Linear1{typeof(y),R}(y => coeff; is_filtered)
     end
 end
 
