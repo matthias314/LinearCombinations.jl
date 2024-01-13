@@ -57,7 +57,7 @@ See also
 [`$(@__MODULE__).has_sizehint`](@ref),
 [`keeps_filtered`](@ref).
 """
-has_isfiltered(f, types...) = hastrait(f, Val(:isfiltered), types...)
+has_isfiltered(f, types...) = hastrait(f, Val(:is_filtered), types...)
 
 """
     $(@__MODULE__).has_sizehint(f, types...) -> Bool
