@@ -190,11 +190,11 @@ macro linear_kw(ex)
     esc(:($traitex; Base.@__doc__ $ex))
 end
 
-linear_extension_coeff_type(f, types...) = _coefftype(return_type(f, types...))
+linear_extension_coeff_type(f::F, types...) where F = _coefftype(return_type(f, types...))
 
-linear_extension_term_type(f, ::Type{T}) where T = _termtype(return_type(f, T))
+linear_extension_term_type(f::F, ::Type{T}) where {F,T} = _termtype(return_type(f, T))
 
-function linear_extension_type(f, ::Type{L}, ::Type{R}) where {L<:AbstractLinear,R}
+function linear_extension_type(f::F, ::Type{L}, ::Type{R}) where {F,L<:AbstractLinear,R}
     LU = return_type(f, _termtype(L))
     U = _termtype(LU)
     L <: Linear1 && (LU <: Linear1 || !(LU <: AbstractLinear)) ? Linear1{U,R} : Linear{U,R}

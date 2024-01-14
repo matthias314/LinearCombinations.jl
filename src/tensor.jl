@@ -201,44 +201,86 @@ Base.@assume_effects :total function tensor_return_type(T...)
     end
 end
 
-# multiplication of tensors
+# transpose of tensors
 
-function tensor_mul_sign(m, d2, fs...)
+function tensor_transpose_sign(m, d2, fs...)
     length(fs) == 0 && return m
     d1 = map(deg, fs[end])
     ds1 = degsums(fs[end])
     m += sum0(map(*, ds1, d2))
     length(fs) == 1 && return m
     d = map(+, d1, d2)
-    tensor_mul_sign(m, d, fs[1:end-1]...)
+    tensor_transpose_sign(m, d, fs[1:end-1]...)
 end
 
-# TODO: avoid sign computations if has_char2
-function *(ts::AbstractTensor...;
-        coefftype = missing,
-        coeff = one(DefaultCoefftype),
-        is_filtered = false,
-        kw...)
-    d2 = map(deg, factors(ts[end]))
-    fs = map(factors, ts)
-    m = tensor_mul_sign(Zero(), d2, fs[1:end-1]...)
+import Base: transpose
+
+@linear transpose
+
+"""
+    transpose(t::AbstractTensor)
+
+Return the transpose of a tensor `t` whose components are tensors of the same length.
+In other words, the component `transpose(t)[i][j]` is `t[j][i]`.
+A sign is added according to the usual sign rule.
+
+# Examples
+
+## Example without signs
+
+```jldoctest transpose
+julia> t = Tensor(Tensor("a", "b", "c"), Tensor("x", "y", "z"))
+(a⊗b⊗c)⊗(x⊗y⊗z)
+
+julia> transpose(t)
+(a⊗x)⊗(b⊗y)⊗(c⊗z)
+```
+
+## Example with signs
+
+As usual, the degree of a `String` is its length.
+
+```jldoctest transpose
+julia> LinearCombinations.deg(x::String) = length(x)
+
+julia> transpose(t)   # same t as before
+-(a⊗x)⊗(b⊗y)⊗(c⊗z)
+```
+"""
+@linear_kw function transpose(t::AbstractTensor{<:Tuple{Vararg{AbstractTensor}}};
+# TODO: more keywords
+        addto = missing,
+        coeff = one(DefaultCoefftype))
+    fs = map(factors, factors(t))
+    isempty(fs) && error("empty tensors cannot be transposed")
+    allequal(map(length, fs)) ||
+        error("all component tensors of the given tensor must have the same length")
+    n1 = length(fs)
+    n2 = length(fs[1])
+    tt = ntuple(n2) do i2
+        ntuple(n1) do i1
+            fs[i1][i2]
+        end |> Tensor
+    end |> Tensor
+    m = tensor_transpose_sign(Zero(), map(deg, fs[end]), fs[1:end-1]...)
     coeff = signed(m, coeff)
-    if coefftype === missing
-        coefftype = typeof(coeff)
+    if addto === missing
+        Linear1(tt => coeff)
+    else
+        addmul!(addto, tt, coeff)
     end
-    ys = map(fs...) do xs...
-        XS = map(typeof, xs)
-        if has_isfiltered(*, XS...)
-            *(xs...; is_filtered)
-        else
-            *(xs...)
-        end
-    end
-    coefftype = promote_type(coefftype, map(_coefftype, ys)...)
-    tensor(ys...; coefftype, coeff, kw...)
 end
 
-hastrait(::typeof(*), ::Val, ::Type{AbstractTensor}...) = true
+# multiplication of tensors
+
+function *(ts::AbstractTensor...; kw...)
+    allequal(map(length, ts)) || error("all tensors must have the same length")
+    f = Tensor(ntuple(Returns(TensorSplat(*)), length(ts[1])))
+    f(transpose(Tensor(ts)); kw...)
+end
+
+hastrait(::typeof(*), ::Val{:coefftype}, ::Type{AbstractTensor}...) = true
+hastrait(::typeof(*), ::Val{:addto_coeff}, ::Type{AbstractTensor}...) = true
 
 function one(::Type{T}) where T <: AbstractTensor
     TT = factor_types(T)
@@ -249,25 +291,13 @@ one(::T) where T <: AbstractTensor = one(T)
 
 # coproduct of tensors
 
-@linear_kw function coprod(t::T;
-# TODO: use some multilinear function instead of "tensor" + reordering
-        coefftype = begin
-            TT = map(typeof, factors(t))
-            R = promote_type(Sign, map(Fix1(linear_extension_coeff_type, coprod), TT)...)
-            R == Sign ? DefaultCoefftype : R
-        end,
-        addto = zero(Linear{Tensor{Tuple{T,T}},unval(coefftype)}),
-        coeff = ONE,
-        is_filtered = false) where T <: AbstractTensor
-    n = length(t)
-    for (tt, c) in tensor(map(coprod, factors(t))...)
-        f1 = ntuple(i -> tt[i][1], n)
-        f2 = ntuple(i -> tt[i][2], n)
-        m = tensor_mul_signexp(Zero(), f1, f2)
-        addto .+= signed(m, c*coeff) .* Tensor(Tensor(f1), Tensor(f2))
-    end
-    addto
+function coprod(t::AbstractTensor; kw...)
+    TensorSlurp(transpose)(map(coprod, factors(t))...; kw...)
 end
+
+# TODO: other keywords
+hastrait(::typeof(coprod), ::Val{:coefftype}, ::Type{AbstractTensor}) = true
+hastrait(::typeof(coprod), ::Val{:addto_coeff}, ::Type{AbstractTensor}) = true
 
 #
 # tensor slurping and splatting
@@ -559,9 +589,11 @@ end
 
     if !hc2
         dfs = degsums(tf)
-        dx = map(deg, factors(tx))
-        m = sum0(splat(*), zip(dfs, dx))
-        coeff = signed(m, coeff)
+        if !all(d -> d isa Zero, dfs)
+            dx = map(deg, factors(tx))
+            m = sum0(map(*, dfs, dx))
+            coeff = signed(m, coeff)
+        end
     end
 
     tfx = ntuple(n) do i
