@@ -203,33 +203,42 @@ end
 
 # multiplication of tensors
 
-mul_rt_tensor(t1::Tuple{}, t2::Tuple{}, T...) = T
-mul_rt_tensor(t1, t2, T...) =
-    mul_rt_tensor(t1[2:end], t2[2:end], T..., return_type(*, typeof(t1[1]), typeof(t2[1])))
-
-tensor_mul_signexp(m, ::Tuple{}, ::Tuple{}) = m
-tensor_mul_signexp(m, f1::Tuple, f2::Tuple) =
-    tensor_mul_signexp(m + deg(f2[1])*sum0(deg, f1[2:end]), f1[2:end], f2[2:end])
-
-function *(t1::AbstractTensor, t2::AbstractTensor;
-        coefftype = begin
-            TT = mul_rt_tensor(factors(t1), factors(t2))
-            R = promote_type(Sign, map(_coefftype, TT)...)
-            R == Sign ? DefaultCoefftype : R
-        end,
-        addto = begin
-            TT = mul_rt_tensor(factors(t1), factors(t2))
-            zero(Linear{Tensor{Tuple{map(_termtype, TT)...}},unval(coefftype)})
-        end,
-        coeff = ONE,
-        is_filtered = false)
-    length(t1) == length(t2) || error("argument tensors must have the same length")
-    f1 = factors(t1)
-    f2 = factors(t2)
-    m = tensor_mul_signexp(Zero(), f1, f2)
-    tensor(map(*, f1, f2)...; addto, coeff = signed(m, coeff), is_filtered)
-    # TODO: does "is_filtered" make sense here?
+function tensor_mul_sign(m, d2, fs...)
+    length(fs) == 0 && return m
+    d1 = map(deg, fs[end])
+    ds1 = degsums(fs[end])
+    m += sum0(map(*, ds1, d2))
+    length(fs) == 1 && return m
+    d = map(+, d1, d2)
+    tensor_mul_sign(m, d, fs[1:end-1]...)
 end
+
+# TODO: avoid sign computations if has_char2
+function *(ts::AbstractTensor...;
+        coefftype = missing,
+        coeff = one(DefaultCoefftype),
+        is_filtered = false,
+        kw...)
+    d2 = map(deg, factors(ts[end]))
+    fs = map(factors, ts)
+    m = tensor_mul_sign(Zero(), d2, fs[1:end-1]...)
+    coeff = signed(m, coeff)
+    if coefftype === missing
+        coefftype = typeof(coeff)
+    end
+    ys = map(fs...) do xs...
+        XS = map(typeof, xs)
+        if has_isfiltered(*, XS...)
+            *(xs...; is_filtered)
+        else
+            *(xs...)
+        end
+    end
+    coefftype = promote_type(coefftype, map(_coefftype, ys)...)
+    tensor(ys...; coefftype, coeff, kw...)
+end
+
+hastrait(::typeof(*), ::Val, ::Type{AbstractTensor}...) = true
 
 function one(::Type{T}) where T <: AbstractTensor
     TT = factor_types(T)
