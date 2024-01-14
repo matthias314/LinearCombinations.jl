@@ -110,7 +110,7 @@ Moreover, `rg` is linear and can be called with linear combinations of tensors.
 
 Note that for each `Regroup` element `rg`, Julia generates separate, efficient code for computing `rg(t)`.
 
-See also [`swap`](@ref), [`Regroup`](@ref), [`$(@__MODULE__).DefaultCoefftype`](@ref).
+See also [`swap`](@ref), [`regroup_inv`](@ref), [`Regroup`](@ref), [`$(@__MODULE__).DefaultCoefftype`](@ref).
 
 # Examples
 
@@ -151,6 +151,13 @@ deg(::Regroup) = Zero()
 
 keeps_filtered(::Regroup, ::Type) = true
 
+"""
+    regroup_inv(a, b) -> Tuple{Regroup,Regroup}
+
+Return the tuple `(regroup(a, b), regroup(b, a))`.
+
+See also [`regroup`](@ref).
+"""
 regroup_inv(a, b) = (regroup(a, b), regroup(b, a))
 
 """

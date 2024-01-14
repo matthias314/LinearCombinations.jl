@@ -103,7 +103,7 @@ zero(a::Type{L}) where L <: AbstractLinear = error_missing(typeof(a))
 """
     $(@__MODULE__).getcoeff(a::AbstractLinear{T,R}, x) where {T,R} -> R
 
-Returns the coefficient of `x` in the linear combination `a`.
+Return the coefficient of `x` in the linear combination `a`.
 This is `zero(R)` if `x` does not appear in `a`.
 
 This function is part of the `AbstractLinear` interface. When it is called,
@@ -415,9 +415,10 @@ hashed_iter(a) = a
 
 Try to make room for in total `n` non-zero term-coefficient pairs in the linear combination `a`.
 
-This can speed up computations. The default is to ignore the hint.
+This can speed up computations. At present, `sizehint!` has an effect for elements of type `Linear`
+(which internally use a dictionary) and is ignored for all other subtypes of `AbstractLinear`.
 
-See also [`$(@__MODULE__).has_sizehint`](@ref).
+See also [`Linear`](@ref), [`$(@__MODULE__).has_sizehint`](@ref), `Base.sizehint!(d::AbstractDict)`.
 """
 sizehint!(a::AbstractLinear, ::Integer) = a
 # default: no sizehint!

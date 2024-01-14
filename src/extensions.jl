@@ -101,7 +101,7 @@ end
     @linear_kw function def
 
 `@linear_kw` scans a function definition for the keywords `coefftype`, `addto`, `coeff`
-and `sizehint!` and makes them known to the `$(@__MODULE__)` package. This allows to
+and `sizehint` and makes them known to the `$(@__MODULE__)` package. This allows to
 write performant code. Not all keywords have to present. However, `addto` and `coeff`
 only have an effect if used together.
 
@@ -721,9 +721,12 @@ export coprod
 """
     coprod(x)
 
-The coproduct (or comultiplication) of `x`. The argument `x` is assumed to be an element of a coalgebra.
+The coproduct (or comultiplication) of `x`, which is assumed to be an element of a coalgebra.
 
-The module $(@__MODULE__) only defines the linear extension of `coprod`, but no methods for terms.
+The module $(@__MODULE__) only defines the linear extension of `coprod`, but no methods for terms,
+except for tensors.
+
+See also [`coprod(t::AbstractTensor)`](@ref).
 """
 function coprod end
 
@@ -741,6 +744,9 @@ export diff
 The differential of `x`.
 
 The module $(@__MODULE__) only defines the linear extension of `diff`, but no methods for terms.
+The only exception is `diff` for tensors.
+
+See also [`diff(t::AbstractTensor)`](@ref).
 """
 function diff end
 

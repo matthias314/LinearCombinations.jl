@@ -218,11 +218,16 @@ import Base: transpose
 @linear transpose
 
 """
-    transpose(t::AbstractTensor)
+    transpose(t::AbstractTensor{T}) where T <: Tuple{Vararg{AbstractTensor}}
 
 Return the transpose of a tensor `t` whose components are tensors of the same length.
 In other words, the component `transpose(t)[i][j]` is `t[j][i]`.
-A sign is added according to the usual sign rule.
+If the components `t[i][j]` have non-zero degrees,
+a sign is added according to the usual sign rule.
+The tensor `t` must have at least one component. If all component tensors are empty,
+then the empty tensor `Tensor()` is returned.
+
+This function is linear.
 
 # Examples
 
@@ -273,6 +278,32 @@ end
 
 # multiplication of tensors
 
+"""
+    *(t1::AbstractTensor , t2::AbstractTensor, ...)
+
+Return the product of the tensors, computed from the products of the tensor factors.
+Signs are introduced according to the usual sign rule. If all degrees are integers,
+then the coefficient type is `DefaultCoefftype`.
+
+This function is linear.
+
+See also: [`$(@__MODULE__).DefaultCoefftype`](@ref).
+
+# Example
+
+```jldoctest
+julia> import LinearCombinations: deg
+
+julia> deg(x::String) = length(x);
+
+julia> (s, t) = Tensor("ab", "c"), Tensor("x", "yz")
+(ab⊗c, x⊗yz)
+
+julia> s*t
+-abx⊗cyz
+
+```
+"""
 function *(ts::AbstractTensor...; kw...)
     allequal(map(length, ts)) || error("all tensors must have the same length")
     f = Tensor(ntuple(Returns(TensorSplat(*)), length(ts[1])))
@@ -291,6 +322,35 @@ one(::T) where T <: AbstractTensor = one(T)
 
 # coproduct of tensors
 
+"""
+    coprod(t::T) where T <: AbstractTensor -> Linear{Tensor{Tuple{T,T}}}
+
+Return the coproduct of a tensor, computed from the coproducts of the tensor factors.
+Signs are introduced according to the usual sign rule. If all degrees are integers,
+then the coefficient type is `DefaultCoefftype`.
+
+This function is linear.
+
+See also: [`coprod`](@ref), [`$(@__MODULE__).DefaultCoefftype`](@ref).
+
+# Example
+```jldoctest
+julia> import LinearCombinations: deg, coprod
+
+julia> deg(x::String) = length(x);
+
+julia> coprod(x::String) = Linear(Tensor(x[1:k], x[k+1:end]) => 1 for k in 1:length(x)-1);
+
+julia> coprod("abc")
+a⊗bc+ab⊗c
+
+julia> t = Tensor("abc", "xyz")
+abc⊗xyz
+
+julia> coprod(t)
+-(ab⊗x)⊗(c⊗yz)+(a⊗xy)⊗(bc⊗z)+(ab⊗xy)⊗(c⊗z)+(a⊗x)⊗(bc⊗yz)
+```
+"""
 function coprod(t::AbstractTensor; kw...)
     TensorSlurp(transpose)(map(coprod, factors(t))...; kw...)
 end
@@ -639,6 +699,45 @@ function tensor_diff(addto, coeff, x, dx, degx, sizehint)
     tensor_diff(addto, coeff, x, dx, degx, sizehint)
 end
 
+"""
+    diff(t::T) where T <: AbstractTensor -> Linear{T}
+
+Return the differential of the tensor `t` by differentiating each tensor factor at a time
+and adding signs according to the degrees of the factors. The coefficient type is usually
+`DefaultCoefftype`. Howeverm if the degrees of the tensor factors are not integers, then
+the coefficient type is chosen such that it can accommodate the signs.
+
+See also [`diff`](@ref), [`$(@__MODULE__).DefaultCoefftype`](@ref).
+
+# Example
+
+As usual, the degree of a string is its length.
+```jldoctest
+julia> import LinearCombinations: deg, diff
+
+julia> deg(x::String) = length(x);
+
+julia> function diff(x::String)
+           if isempty(x) || x[1] == 'D'
+               zero(Linear1{String,Int})
+           else
+               Linear1('D'*x => 1)\
+           end
+       end;
+
+julia> dx = diff("x")
+Dx
+
+julia> diff(dx)
+0
+
+julia> t = Tensor("a", "bb", "ccc")
+a⊗bb⊗ccc
+
+julia> diff(t)
+Da⊗bb⊗ccc-a⊗Dbb⊗ccc-a⊗bb⊗Dccc
+```
+"""
 @linear_kw function diff(t::T;
         coefftype = missing,
         addto = missing,
