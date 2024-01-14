@@ -588,56 +588,54 @@ end
 
 # differential
 
-function diff_coeff_type(T...)
-    RD = map(Fix1(linear_extension_coeff_type, diff), T)
-    RS = map(Fix1(sign_type ∘ return_type, deg), T)
-    R = promote_type(Sign, RD..., RS...)
-    R == Sign ? DefaultCoefftype : R
+function tensor_diff(addto, coeff, x, dx, degx, sizehint)
+    isempty(dx) && return addto
+    dx1, dx... = dx
+    degx1, degx... = degx
+    coeff = signed(degx1, coeff)
+    k = length(x)-length(dx)
+    tensor(x[1:k-1]..., dx1, x[k+1:end]...; addto, coeff, sizehint)
+    tensor_diff(addto, coeff, x, dx, degx, sizehint)
 end
 
-tensor_diff(addto::AbstractLinear{T,R}, coeff, e, t1, t0::Tuple{}) where {T,R} = nothing
-
-function tensor_diff(addto::AbstractLinear{T,R}, coeff, e, t1, t0) where {T,R}
-    if has_char2(R) && has_coefftype(diff, typeof(t0[1]))
-        dx = diff(t0[1]; coefftype = Val(R))
-    else
-        dx = diff(t0[1])
-    end
-    tensor_diff(addto, coeff, e, t1, t0[2:end], t0[1], dx)
-end
-
-function tensor_diff(addto, coeff, e, t1, t0, x, dx)
-    linear_filter(dx) && addmul!(addto, Tensor((t1..., dx, t0...)), signed(e, coeff))
-    e = has_char2(coefftype(addto)) ? Zero() : e+deg(x)
-    tensor_diff(addto, coeff, e, (t1..., x), t0)
-end
-
-function tensor_diff(addto, coeff, e, t1, t0, x, dx::AbstractLinear)
-    for (y, c) in dx
-        addmul!(addto, Tensor((t1..., y, t0...)), signed(e, coeff*c))
-    end
-    e = has_char2(coefftype(addto)) ? Zero() : e+deg(x)
-    tensor_diff(addto, coeff, e, (t1..., x), t0)
-end
-
-# TODO: use keeps_filtered?
 @linear_kw function diff(t::T;
-        # coefftype = diff_coeff_type(T),
-        coefftype = diff_coeff_type(map(typeof, factors(t))...),
-        # TODO: this should be coefftype::Type{R} and "R" being used in the next line
-        addto = zero(Linear{T,coefftype}),
+        coefftype = missing,
+        addto = missing,
         coeff = ONE,
-        is_filtered = false) where T <: AbstractTensor
-    if !iszero(coeff) && (is_filtered || linear_filter(t))
-        tensor_diff(addto, coeff, Zero(), (), factors(t))
+        is_filtered::Bool = false,
+        sizehint::Bool = true) where T <: AbstractTensor
+    x = factors(t)
+    isempty(x) && return zero(Linear{T,DefaultCoefftype})
+
+    if addto !== missing
+        R = _coefftype(addto)
+    elseif coefftype !== missing
+        R = unval(coefftype)
+    else
+        R = missing
     end
-    addto
-end
+    kwc = has_char2(R) ? (; coefftype = R) : (;)
 
-function return_type(::typeof(diff), ::Type{T}) where T <: Tensor
-    U = T isa UnionAll ? T.var.ub : T.parameters[1]
-    Linear{T,diff_coeff_type(U.parameters...)}
-end
+    dx = map(x) do y
+        Y = typeof(y)
+        kwd = has_isfiltered(diff, Y) ? (; is_filtered) : (;)
+        if has_coefftype(diff, Y)
+            kwd = push_kw(kwd; kwc...)
+        end
+        diff(y; kwd...)
+    end
 
-# linear_extension_coeff_type(::typeof(diff), ::Type{T}, ::Type{R}) where {T,R} = R
-linear_extension_term_type(::typeof(diff), ::Type{T}) where T = T
+    if has_char2(R)
+        degx = ntuple(Returns(Zero()), length(x))
+    else
+        degx = (Zero(), map(deg, x[1:end-1])...)
+    end
+
+    if addto === missing
+        if R === missing
+            R = promote_type(map(_coefftype, dx)..., map(sign_type ∘ typeof, degx)...)
+        end
+        addto = zero(Linear{T,R})
+    end
+    tensor_diff(addto, coeff, x, dx, degx, sizehint)
+end

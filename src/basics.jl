@@ -194,6 +194,7 @@ avoids (possibly expensive) sign computations.
 See also [`is_domain`](@ref).
 """
 has_char2(::Type) = false
+has_char2(::Missing) = false
 
 signed(k, x::R) where R = has_char2(R) || iseven(k) ? x : -x
 
