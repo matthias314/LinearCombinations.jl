@@ -260,6 +260,8 @@ end
 
 zero(::T) where T <: AbstractLinear = zero(T)
 
+iszero(a::AbstractLinear) = iszero(length(a))
+
 """
     zero!(a::AbstractLinear) -> a
 
