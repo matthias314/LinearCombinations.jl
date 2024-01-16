@@ -214,15 +214,15 @@ const swap = regroup(:((1,2)), :((2,1)))
 # regrouping of tensors
 #
 
-_length(::Type{T}) where T <: Tuple = length(T.parameters)
-_length(::Type{T}) where T <: AbstractTensor = length(factor_types(T))
+_length(::Type{T}) where T <: Tuple = length(fieldtypes(T))
+_length(::Type{<:AbstractTensor{T}}) where T <: Tuple = _length(T)
 
 _getindex(x) = x
 @propagate_inbounds _getindex(x, i) = x[i]
 @propagate_inbounds _getindex(x, i, ii...) = _getindex(_getindex(x, i), ii...)
 
-@propagate_inbounds _getindex(::Type{T}, i) where T <: Tuple = T.parameters[i]
-@propagate_inbounds _getindex(::Type{T}, i) where T <: AbstractTensor = _getindex(factor_types(T), i)
+@propagate_inbounds _getindex(::Type{T}, i) where T <: Tuple = fieldtype(T, i)
+@propagate_inbounds _getindex(::Type{<:AbstractTensor{T}}, i) where T <: Tuple = _getindex(T, i)
 
 regroup_check_arg(::Type, ::Type, ::Type) = true
 

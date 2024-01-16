@@ -59,8 +59,7 @@ See also [`deg`](@ref).
 deg(t::AbstractTensor) = sum0(deg, factors(t))
 # type inference doesn't work without "factors"
 
-# factor_types(::Type{T}) where T <: AbstractTensor = return_type(factors, T).parameters
-factor_types(::Type{T}) where T <: AbstractTensor = (T.parameters[1].parameters...,)
+# factor_types(::Type{<:AbstractTensor{T}}) where T <: Tuple = fieldtypes(T)
 
 #=
 deg_return_type_tensor(R, T...) = promote_type(R, map(Fix1(return_type, deg), T)...)
@@ -335,10 +334,7 @@ end
 hastrait(::typeof(*), ::Val{:coefftype}, ::Type{AbstractTensor}...) = true
 hastrait(::typeof(*), ::Val{:addto_coeff}, ::Type{AbstractTensor}...) = true
 
-function one(::Type{T}) where T <: AbstractTensor
-    TT = factor_types(T)
-    Tensor(ntuple(i -> one(TT[i]), length(TT)))
-end
+one(::Type{<:AbstractTensor{T}}) where T <: Tuple = Tensor(map(one, fieldtypes(T)))
 
 one(::T) where T <: AbstractTensor = one(T)
 
@@ -493,7 +489,7 @@ show(io::IO, g::TensorSplat) = print(io, "TensorSplat($(repr(g.f)))")
 
 @linear g::TensorSplat
 
-hastrait(g::TensorSplat, prop::Val, ::Type{T}) where T <: AbstractTensor = hastrait(g.f, prop, factor_types(T)...)
+hastrait(g::TensorSplat, prop::Val, ::Type{<:AbstractTensor{T}}) where T <: Tuple = hastrait(g.f, prop, fieldtypes(T)...)
 
 deg(g::TensorSplat) = deg(g.f)
 
