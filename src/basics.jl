@@ -15,7 +15,7 @@ element_type(g::Base.Generator) = return_type(g.f, element_type(g.iter))
 # basics
 #
 
-error_missing(T) = error("implementation missing for type ", T)
+error_missing(::Type{T}) where T = error("implementation missing for type ", T)
 
 macro Function(T)
 # turns a type (constructor) into a function

@@ -98,7 +98,7 @@ as argument, then keyword arguments may be accepted or required.
 
 See also [`zero!`](@ref).
 """
-zero(a::Type{L}) where L <: AbstractLinear = error_missing(typeof(a))
+zero(a::Type{L}) where L <: AbstractLinear = error_missing(L)
 
 """
     $(@__MODULE__).getcoeff(a::AbstractLinear{T,R}, x) where {T,R} -> R
