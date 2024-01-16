@@ -348,7 +348,7 @@ end
     tt = ('x', "y", [1,2])
     t = @inferred Tensor(tt)
     @test t == @inferred Tensor(tt...)
-    @test @inferred(factors(t)) == tt
+    @test @inferred(Tuple(t)) == tt
     @test Tuple(x for x in t) == tt
     
 

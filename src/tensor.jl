@@ -11,31 +11,31 @@ using StructEqualHash: typehash
 
 The supertype of all tensor types. Currently the only subtype is `Tensor`.
 
-See [`Tensor`](@ref), [`tensor`](@ref), [`factors`](@ref).
+See [`Tensor`](@ref), [`tensor`](@ref), [`Tuple(t::AbstractTensor)`](@ref).
 """
 abstract type AbstractTensor{T<:Tuple} end
 
 (::Type{T})(x...) where T <: AbstractTensor = T(x)
 
 """
-    factors(t::AbstractTensor{T}) -> T <: Tuple
+    Tuple(t::AbstractTensor{T}) -> T <: Tuple
 
 Return the tuple of components of `t`.
 """
-factors(t::T) where T <: AbstractTensor = error_missing(T)
+Base.Tuple(t::AbstractTensor) = error_missing(typeof(t))
 
-==(t1::AbstractTensor, t2::AbstractTensor) = factors(t1) == factors(t2)
+==(t1::AbstractTensor, t2::AbstractTensor) = Tuple(t1) == Tuple(t2)
 
-Base.hash(t::AbstractTensor, h::UInt) = hash((factors(t),), typehash(AbstractTensor, h))
+Base.hash(t::AbstractTensor, h::UInt) = hash((Tuple(t),), typehash(AbstractTensor, h))
 
-length(t::AbstractTensor) = length(factors(t))
+length(t::AbstractTensor) = length(Tuple(t))
 
 firstindex(t::AbstractTensor) = 1
 lastindex(t::AbstractTensor) = length(t)
 
-iterate(t::AbstractTensor, state...) = iterate(factors(t), state...)
+iterate(t::AbstractTensor, state...) = iterate(Tuple(t), state...)
 
-@propagate_inbounds getindex(t::AbstractTensor, k) = factors(t)[k]
+@propagate_inbounds getindex(t::AbstractTensor, k) = Tuple(t)[k]
 
 function show(io::IO, t::AbstractTensor)
     if isempty(t)
@@ -47,7 +47,7 @@ end
 
 copy(t::AbstractTensor) = t
 
-convert(::Type{T}, t::AbstractTensor) where T <: AbstractTensor = T(factors(t))
+convert(::Type{T}, t::AbstractTensor) where T <: AbstractTensor = T(Tuple(t))
 
 """
     deg(t::AbstractTensor)
@@ -56,8 +56,8 @@ Return the degree of a tensor, which is the sum of the degrees of its components
 
 See also [`deg`](@ref).
 """
-deg(t::AbstractTensor) = sum0(deg, factors(t))
-# type inference doesn't work without "factors"
+deg(t::AbstractTensor) = sum0(deg, Tuple(t))
+# type inference doesn't work without "Tuple"
 
 # factor_types(::Type{<:AbstractTensor{T}}) where T <: Tuple = fieldtypes(T)
 
@@ -75,7 +75,7 @@ _degsums(dt, t...) = _degsums((deg(t[end])+dt[1], dt...), t[1:end-1]...)
 degsums(::Tuple{}) = ()
 degsums(t::Tuple) = _degsums((Zero(),), t[2:end]...)
 
-degsums(t::AbstractTensor) = degsums(factors(t))
+degsums(t::AbstractTensor) = degsums(Tuple(t))
 
 linear_filter(t::AbstractTensor) = all(linear_filter, t)
 
@@ -87,7 +87,7 @@ keeps_filtered(::Type{<:AbstractTensor}, T::Type...) = true
 # Tensor datatype
 #
 
-export Tensor, factors, tensor, ⊗, cat, flatten
+export Tensor, tensor, ⊗, cat, flatten
 
 """
     Tensor{T<:Tuple}
@@ -165,7 +165,8 @@ julia> a = tensor(); a[Tensor()]
 struct Tensor{T<:Tuple} <: AbstractTensor{T}
     a::T
 end
-factors(t::Tensor) = t.a
+
+Base.Tuple(t::Tensor) = t.a
 
 const Tensor_func = @Function(Tensor)
 keeps_filtered(::typeof(Tensor_func), T::Type...) = keeps_filtered(Tensor, T...)
@@ -277,7 +278,7 @@ julia> transpose(t)   # same t as before
 # TODO: more keywords
         addto = missing,
         coeff = one(DefaultCoefftype))
-    fs = map(factors, factors(t))
+    fs = map(Tuple, Tuple(t))
     isempty(fs) && error("empty tensors cannot be transposed")
     allequal(map(length, fs)) ||
         error("all component tensors of the given tensor must have the same length")
@@ -302,7 +303,7 @@ end
 """
     *(t1::AbstractTensor , t2::AbstractTensor, ...)
 
-Return the product of the tensors, computed from the products of the tensor factors.
+Return the product of the tensors, computed from the products of its components.
 Signs are introduced according to the usual sign rule. If all degrees are integers,
 then the coefficient type is `DefaultCoefftype`.
 
@@ -343,7 +344,7 @@ one(::T) where T <: AbstractTensor = one(T)
 """
     coprod(t::T) where T <: AbstractTensor -> Linear{Tensor{Tuple{T,T}}}
 
-Return the coproduct of a tensor, computed from the coproducts of the tensor factors.
+Return the coproduct of a tensor, computed from the coproducts of its components.
 Signs are introduced according to the usual sign rule. If all degrees are integers,
 then the coefficient type is `DefaultCoefftype`.
 
@@ -370,7 +371,7 @@ julia> coprod(t)
 ```
 """
 function coprod(t::AbstractTensor; kw...)
-    TensorSlurp(transpose)(map(coprod, factors(t))...; kw...)
+    TensorSlurp(transpose)(map(coprod, Tuple(t))...; kw...)
 end
 
 # TODO: other keywords
@@ -485,7 +486,7 @@ end
 
 show(io::IO, g::TensorSplat) = print(io, "TensorSplat($(repr(g.f)))")
 
-(g::TensorSplat)(x::AbstractTensor; kw...) = g.f(factors(x)...; kw...)
+(g::TensorSplat)(x::AbstractTensor; kw...) = g.f(Tuple(x)...; kw...)
 
 @linear g::TensorSplat
 
@@ -523,7 +524,7 @@ cat(t::AbstractTensor...) = Tensor(_cat(t...))
 # TODO: add keeps_filtered?
 
 _flatten(x) = (x,)
-_flatten(x::AbstractTensor) = _cat(map(_flatten, factors(x))...)
+_flatten(x::AbstractTensor) = _cat(map(_flatten, Tuple(x))...)
 
 @linear flatten
 # no keywords
@@ -567,7 +568,7 @@ function tensormap(ff...)
     TensorMap(ff, degsums(ff))
 end
 
-factors(f::TensorMap) = f.ff
+Tuple(f::TensorMap) = f.ff
 
 degsums(f::TensorMap) = f.degsums
 
@@ -650,7 +651,7 @@ julia> j(b)
         sizehint::Bool = true,
         kw...)
     n = length(tf)
-    n == length(tx) || error("wrong number of tensor factors")
+    n == length(tx) || error("wrong number of tensor components")
 
     kwt = kw
     if addto !== missing
@@ -666,7 +667,7 @@ julia> j(b)
     if !hc2
         dfs = degsums(tf)
         if !all(d -> d isa Zero, dfs)
-            dx = map(deg, factors(tx))
+            dx = map(deg, Tuple(tx))
             m = sum0(map(*, dfs, dx))
             coeff = signed(m, coeff)
         end
@@ -694,7 +695,7 @@ end
 # TODO: this poses problems with inference
 function return_type(g::TensorMap, ::Type{T}) where T <: Tensor
     types = T.parameters[1].parameters
-    length(types) == length(g) || error("wrong number of tensor factors")
+    length(types) == length(g) || error("wrong number of tensor components")
     TT = ntuple(k -> return_type(g[k], types[k]), length(g))
     U = Tensor{Tuple{map(_termtype, TT)...}}
     S = promote_type(Sign, map(_coefftype, TT)...)
@@ -719,8 +720,8 @@ end
     diff(t::T) where T <: AbstractTensor -> Linear{T}
 
 Return the differential of the tensor `t` by differentiating each tensor factor at a time
-and adding signs according to the degrees of the factors. The coefficient type is usually
-`DefaultCoefftype`. Howeverm if the degrees of the tensor factors are not integers, then
+and adding signs according to the degrees of the components. The coefficient type is usually
+`DefaultCoefftype`. However, if the degrees of the tensor components are not integers, then
 the coefficient type is chosen such that it can accommodate the signs.
 
 See also [`diff`](@ref), [`$(@__MODULE__).DefaultCoefftype`](@ref).
@@ -760,7 +761,7 @@ Da⊗bb⊗ccc-a⊗Dbb⊗ccc-a⊗bb⊗Dccc
         coeff = ONE,
         is_filtered::Bool = false,
         sizehint::Bool = true) where T <: AbstractTensor
-    x = factors(t)
+    x = Tuple(t)
     isempty(x) && return zero(Linear{T,DefaultCoefftype})
 
     if addto !== missing
