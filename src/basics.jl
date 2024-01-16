@@ -259,7 +259,7 @@ export deg
 Return the degree of `x`. The default value of `deg(x)` is `0`.
 (More precisely, it is `$(@__MODULE__).Zero()`, which behaves like `0`.)
 
-See also [`$(@__MODULE__).Zero`](@ref).
+See also [`deg(::AbstractTensor)`](@ref), [`$(@__MODULE__).Zero`](@ref).
 """
 deg(_) = Zero()
 

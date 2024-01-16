@@ -669,6 +669,13 @@ deg(g::MultilinearExtension) = deg(g.f)
 # bilinear and multilinear extension of multiplication
 #
 
+"""
+    LinearCombinations.mul(x1::Any, x2::Any, ...)
+
+Return the product of the arguments. This is the multilinear extension of `*`.
+
+The new name avoids type piracy since `mul` accepts all argument types.
+"""
 const mul = MultilinearExtension(*)
 
 function isone(a::AbstractLinear{T}) where T

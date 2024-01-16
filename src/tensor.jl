@@ -6,10 +6,22 @@ export AbstractTensor
 
 using StructEqualHash: typehash
 
+"""
+    AbstractTensor{T<:Tuple}
+
+The supertype of all tensor types. Currently the only subtype is `Tensor`.
+
+See [`Tensor`](@ref), [`tensor`](@ref), [`factors`](@ref).
+"""
 abstract type AbstractTensor{T<:Tuple} end
 
 (::Type{T})(x...) where T <: AbstractTensor = T(x)
 
+"""
+    factors(t::AbstractTensor{T}) -> T <: Tuple
+
+Return the tuple of components of `t`.
+"""
 factors(t::T) where T <: AbstractTensor = error_missing(T)
 
 ==(t1::AbstractTensor, t2::AbstractTensor) = factors(t1) == factors(t2)
@@ -37,6 +49,13 @@ copy(t::AbstractTensor) = t
 
 convert(::Type{T}, t::AbstractTensor) where T <: AbstractTensor = T(factors(t))
 
+"""
+    deg(t::AbstractTensor)
+
+Return the degree of a tensor, which is the sum of the degrees of its components.
+
+See also [`deg`](@ref).
+"""
 deg(t::AbstractTensor) = sum0(deg, factors(t))
 # type inference doesn't work without "factors"
 
@@ -109,6 +128,9 @@ x⊗y⊗z
 
 julia> typeof(t)
 Tensor{Tuple{Char, Char, String}}
+
+julia> Tuple(t)
+('x', 'y', "z")
 
 julia> length(t), t[2], t[end]
 (3, 'y', "z")
@@ -545,71 +567,6 @@ struct TensorMap{T<:Tuple,DS<:Tuple} <: AbstractTensor{T}
     degsums::DS
 end
 
-"""
-    tensormap(f...) -> TensorMap
-
-Return the `TensorMap` object representing the tensor products of the given maps.
-
-Evaluating a `TensorMap` on a `Tensor` (with the same number of components) is done
-componentwise. If the degrees of the components and the maps are not all zero, then
-the usual sign is introduced: whenever a map `f` is moved past a component `x`, then
-this changes the sign by `(-1)^(deg(f)*deg(x))`.
-
-# Examples
-
-## Examples without degrees
-
-```jldoctest tensormap
-julia> @linear f; f(x) = uppercase(x)
-f (generic function with 2 methods)
-
-julia> @linear g; g(x) = lowercase(x)
-g (generic function with 2 methods)
-
-julia> const h = tensormap(f, g)
-f⊗g
-
-julia> a, b = Linear('x' => 1, 'y' => 2), Linear('Z' => -1, 'W' => 3)
-(x+2*y, -Z+3*W)
-
-julia> h(Tensor('x', 'Z'))
-X⊗z
-
-julia> h(tensor(a, b))
-6*Y⊗w-2*Y⊗z+3*X⊗w-X⊗z
-```
-
-## Examples with degrees
-
-We again take the length of a `String` as its degree.
-```jldoctest tensormap
-julia> import LinearCombinations: deg
-
-julia> deg(x::String) = length(x);
-
-julia> struct P{T} y::T end; deg(p::P) = deg(p.y);
-
-julia> @linear p::P; (p::P)(x) = x * p.y
-
-julia> p = P("pp"); q = P("qqq")
-P{String}("qqq")
-
-julia> j = tensormap(p, q)
-P{String}("pp")⊗P{String}("qqq")
-
-julia> j(Tensor("x", "yy"))
--xpp⊗yyqqq
-
-julia> a = Linear("x" => 1, "yy" => 2)
-x+2*yy
-
-julia> b = tensor(a, a)
-2*x⊗yy+4*yy⊗yy+x⊗x+2*yy⊗x
-
-julia> j(b)
--xpp⊗xqqq-2*xpp⊗yyqqq+2*yypp⊗xqqq+4*yypp⊗yyqqq
-```
-"""
 function tensormap(ff...)
     TensorMap(ff, degsums(ff))
 end
@@ -626,6 +583,69 @@ end
 
 @linear tf::AbstractTensor
 
+"""
+    (tf::AbstractTensor)(tx::AbstractTensor) -> Tensor
+
+Evaluating an `AbstractTensor` on another `AbstractTensor` (with the same number of components) is done
+componentwise. If the degrees of the components and the maps are not all zero, then
+the usual sign is introduced: whenever a map `f` is moved past a component `x`, then
+this changes the sign by `(-1)^(deg(f)*deg(x))`.
+
+# Examples
+
+## Examples without degrees
+
+```jldoctest tensorcall
+julia> @linear f; f(x) = uppercase(x)
+f (generic function with 2 methods)
+
+julia> @linear g; g(x) = lowercase(x)
+g (generic function with 2 methods)
+
+julia> const h = Tensor(f, g)
+f⊗g
+
+julia> a, b = Linear('x' => 1, 'y' => 2), Linear('Z' => -1, 'W' => 3)
+(x+2*y, -Z+3*W)
+
+julia> h(Tensor('x', 'Z'))
+X⊗z
+
+julia> h(tensor(a, b))
+6*Y⊗w-2*Y⊗z+3*X⊗w-X⊗z
+```
+
+## Examples with degrees
+
+We again take the length of a `String` as its degree.
+```jldoctest tensorcall
+julia> import LinearCombinations: deg
+
+julia> deg(x::String) = length(x);
+
+julia> struct P{T} y::T end; deg(p::P) = deg(p.y);
+
+julia> @linear p::P; (p::P)(x) = x * p.y
+
+julia> p = P("pp"); q = P("qqq")
+P{String}("qqq")
+
+julia> j = Tensor(p, q)
+P{String}("pp")⊗P{String}("qqq")
+
+julia> j(Tensor("x", "yy"))
+-xpp⊗yyqqq
+
+julia> a = Linear("x" => 1, "yy" => 2)
+x+2*yy
+
+julia> b = tensor(a, a)
+2*x⊗yy+4*yy⊗yy+x⊗x+2*yy⊗x
+
+julia> j(b)
+-xpp⊗xqqq-2*xpp⊗yyqqq+2*yypp⊗xqqq+4*yypp⊗yyqqq
+```
+"""
 @linear_kw function (tf::AbstractTensor)(tx::AbstractTensor;
         coefftype = missing,
         addto = missing,

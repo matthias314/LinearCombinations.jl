@@ -1,7 +1,7 @@
 """
     LinearCombinations
 
-A Julia package to work with formal linear combinations, Tensors
+A Julia package to work with formal linear combinations, tensors
 and linear as well as multilinear maps.
 The terms appearing in a linear combination can be of any type,
 and coefficients can be in any commutative ring with unit.
