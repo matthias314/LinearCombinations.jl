@@ -225,14 +225,35 @@ end
 
 # transpose of tensors
 
-function tensor_transpose_sign(m, d2, fs...)
-    length(fs) == 0 && return m
-    d1 = map(deg, fs[end])
-    ds1 = degsums(fs[end])
+function transpose_nosign(t::AbstractTensor{<:Tuple{Vararg{AbstractTensor}}})
+    n1 = length(t)
+    n1 == 0 && error("empty tensors cannot be transposed")
+    allequal(map(length, Tuple(t))) ||
+        error("all component tensors of the given tensor must have the same length")
+    n2 = length(t[1])
+    ntuple(n2) do i2
+        ntuple(n1) do i1
+            t[i1][i2]
+        end |> Tensor
+    end |> Tensor
+end
+
+function _transpose_signexp(m, d2, tt)
+    d1 = map(deg, tt[end])
+    ds1 = degsums(tt[end])
     m += sum0(map(*, ds1, d2))
-    length(fs) == 1 && return m
-    d = map(+, d1, d2)
-    tensor_transpose_sign(m, d, fs[1:end-1]...)
+    if length(tt) == 1
+        m
+    else
+        _transpose_signexp(m, map(+, d1, d2), tt[1:end-1])
+    end
+end
+
+transpose_signexp(::AbstractTensor{<:Tuple{AbstractTensor}}) = Zero()
+
+Base.@assume_effects :total function transpose_signexp(t::AbstractTensor{<:Tuple{Vararg{AbstractTensor}}})
+    tt = map(Tuple, Tuple(t))
+    _transpose_signexp(Zero(), map(deg, tt[end]), tt[1:end-1])
 end
 
 import Base: transpose
@@ -277,24 +298,15 @@ julia> transpose(t)   # same t as before
 @linear_kw function transpose(t::AbstractTensor{<:Tuple{Vararg{AbstractTensor}}};
 # TODO: more keywords
         addto = missing,
-        coeff = one(DefaultCoefftype))
-    fs = map(Tuple, Tuple(t))
-    isempty(fs) && error("empty tensors cannot be transposed")
-    allequal(map(length, fs)) ||
-        error("all component tensors of the given tensor must have the same length")
-    n1 = length(fs)
-    n2 = length(fs[1])
-    tt = ntuple(n2) do i2
-        ntuple(n1) do i1
-            fs[i1][i2]
-        end |> Tensor
-    end |> Tensor
-    m = tensor_transpose_sign(Zero(), map(deg, fs[end]), fs[1:end-1]...)
+        coeff = one(DefaultCoefftype),
+        is_filtered = false)
+    tt = transpose_nosign(t)
+    m = transpose_signexp(t)
     coeff = signed(m, coeff)
     if addto === missing
-        Linear1(tt => coeff)
+        Linear1(tt => coeff; is_filtered)
     else
-        addmul!(addto, tt, coeff)
+        addmul!(addto, tt, coeff; is_filtered)
     end
 end
 
@@ -665,12 +677,8 @@ julia> j(b)
     end
 
     if !hc2
-        dfs = degsums(tf)
-        if !all(d -> d isa Zero, dfs)
-            dx = map(deg, Tuple(tx))
-            m = sum0(map(*, dfs, dx))
-            coeff = signed(m, coeff)
-        end
+        m = transpose_signexp(Tensor(tf, tx))
+        coeff = signed(m, coeff)
     end
 
     tfx = ntuple(n) do i
