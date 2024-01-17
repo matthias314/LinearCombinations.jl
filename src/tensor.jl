@@ -77,7 +77,7 @@ degsums(t::Tuple) = _degsums((Zero(),), t[2:end]...)
 
 degsums(t::AbstractTensor) = degsums(Tuple(t))
 
-linear_filter(t::AbstractTensor) = all(linear_filter, t)
+linear_filter(t::AbstractTensor) = all(linear_filter, Tuple(t))
 
 keeps_filtered(::Type{<:AbstractTensor}, T::Type...) = true
 
