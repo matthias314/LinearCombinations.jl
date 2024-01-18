@@ -243,6 +243,7 @@ end
 
 _coefftype(::Type{<:AbstractLinear{T,R}}) where {T,R} = R
 _coefftype(::T) where T = _coefftype(T)
+_coefftype(::Missing) = missing
 
 function ==(a::AbstractLinear, b::AbstractLinear)
     length(a) == length(b) && all(hashed_iter(a)) do (x, c)

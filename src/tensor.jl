@@ -69,13 +69,11 @@ return_type(::typeof(deg), ::Type{T}) where T <: AbstractTensor =
     deg_return_type_tensor(Int, factor_types(T)...)
 =#
 
-_degsums(dt) = dt
-_degsums(dt, t...) = _degsums((deg(t[end])+dt[1], dt...), t[1:end-1]...)
+_revsums(dt) = dt
+_revsums(dt, t...) = _revsums((t[end]+dt[1], dt...), t[1:end-1]...)
 
-degsums(::Tuple{}) = ()
-degsums(t::Tuple) = _degsums((Zero(),), t[2:end]...)
-
-degsums(t::AbstractTensor) = degsums(Tuple(t))
+revsums(::Tuple{}) = ()
+revsums(t::Tuple) = _revsums((Zero(),), t[2:end]...)
 
 linear_filter(t::AbstractTensor) = all(linear_filter, Tuple(t))
 
@@ -225,22 +223,17 @@ end
 
 # transpose of tensors
 
+isrectangular(t::AbstractTensor{<:Tuple{Vararg{AbstractTensor}}}) =
+    !isempty(t) && allequal(map(length, Tuple(t)))
+
 function transpose_nosign(t::AbstractTensor{<:Tuple{Vararg{AbstractTensor}}})
-    n1 = length(t)
-    n1 == 0 && error("empty tensors cannot be transposed")
-    allequal(map(length, Tuple(t))) ||
-        error("all component tensors of the given tensor must have the same length")
-    n2 = length(t[1])
-    ntuple(n2) do i2
-        ntuple(n1) do i1
-            t[i1][i2]
-        end |> Tensor
-    end |> Tensor
+    isrectangular(t) || error("all component tensors of the given tensor must have the same length")
+    Tensor(map(Tensor∘tuple, map(Tuple, Tuple(t))...))
 end
 
 function _transpose_signexp(m, d2, tt)
     d1 = map(deg, tt[end])
-    ds1 = degsums(tt[end])
+    ds1 = revsums(d1)
     m += sum0(map(*, ds1, d2))
     if length(tt) == 1
         m
@@ -252,6 +245,7 @@ end
 transpose_signexp(::AbstractTensor{<:Tuple{AbstractTensor}}) = Zero()
 
 Base.@assume_effects :total function transpose_signexp(t::AbstractTensor{<:Tuple{Vararg{AbstractTensor}}})
+    isrectangular(t) || error("all component tensors of the given tensor must have the same length")
     tt = map(Tuple, Tuple(t))
     _transpose_signexp(Zero(), map(deg, tt[end]), tt[1:end-1])
 end
@@ -296,14 +290,21 @@ julia> transpose(t)   # same t as before
 ```
 """
 @linear_kw function transpose(t::AbstractTensor{<:Tuple{Vararg{AbstractTensor}}};
-# TODO: more keywords
+# TODO: sizehint?
+        coefftype = missing,
         addto = missing,
         coeff = one(DefaultCoefftype),
         is_filtered = false)
+    coefftype = unval(coefftype)
     tt = transpose_nosign(t)
-    m = transpose_signexp(t)
-    coeff = signed(m, coeff)
+    if !(has_char2(_coefftype(addto)) || (addto === missing && has_char2(coefftype)))
+        m = transpose_signexp(t)
+        coeff = signed(m, coeff)
+    end
     if addto === missing
+        if coefftype !== missing
+            coeff = convert(coefftype, coeff)
+        end
         Linear1(tt => coeff; is_filtered)
     else
         addmul!(addto, tt, coeff; is_filtered)
@@ -339,13 +340,11 @@ julia> s*t
 ```
 """
 function *(ts::AbstractTensor...; kw...)
-    allequal(map(length, ts)) || error("all tensors must have the same length")
-    f = Tensor(ntuple(Returns(TensorSplat(*)), length(ts[1])))
-    f(transpose(Tensor(ts)); kw...)
+    f = Tensor(ntuple(Returns(*), length(ts[1])))
+    f(ts...; kw...)
 end
 
-hastrait(::typeof(*), ::Val{:coefftype}, ::Type{AbstractTensor}...) = true
-hastrait(::typeof(*), ::Val{:addto_coeff}, ::Type{AbstractTensor}...) = true
+hastrait(::typeof(*), ::Val, ::Type{<:AbstractTensor}...) = true
 
 one(::Type{<:AbstractTensor{T}}) where T <: Tuple = Tensor(map(one, fieldtypes(T)))
 
@@ -386,9 +385,10 @@ function coprod(t::AbstractTensor; kw...)
     TensorSlurp(transpose)(map(coprod, Tuple(t))...; kw...)
 end
 
-# TODO: other keywords
+# TODO: other keywords: also sizehint !?
 hastrait(::typeof(coprod), ::Val{:coefftype}, ::Type{AbstractTensor}) = true
 hastrait(::typeof(coprod), ::Val{:addto_coeff}, ::Type{AbstractTensor}) = true
+hastrait(::typeof(coprod), ::Val{:isfiltered}, ::Type{AbstractTensor}) = true
 
 #
 # tensor slurping and splatting
@@ -577,7 +577,7 @@ struct TensorMap{T<:Tuple,DS<:Tuple} <: AbstractTensor{T}
 end
 
 function tensormap(ff...)
-    TensorMap(ff, degsums(ff))
+    TensorMap(ff, revsums(map(deg, ff)))
 end
 
 Tuple(f::TensorMap) = f.ff
@@ -590,12 +590,12 @@ end
 
 # evaluation of AbstractTensor
 
-@linear tf::AbstractTensor
+@multilinear tf::AbstractTensor
 
 """
-    (tf::AbstractTensor)(tx::AbstractTensor) -> Tensor
+    (tf::AbstractTensor)(tx::AbstractTensor...) -> Tensor
 
-Evaluating an `AbstractTensor` on another `AbstractTensor` (with the same number of components) is done
+Evaluating an `AbstractTensor` on other `AbstractTensor`s (with the same number of components) is done
 componentwise. If the degrees of the components and the maps are not all zero, then
 the usual sign is introduced: whenever a map `f` is moved past a component `x`, then
 this changes the sign by `(-1)^(deg(f)*deg(x))`.
@@ -654,50 +654,55 @@ julia> b = tensor(a, a)
 julia> j(b)
 -xpp⊗xqqq-2*xpp⊗yyqqq+2*yypp⊗xqqq+4*yypp⊗yyqqq
 ```
+
+## A multilinear example
+
+```jldoctest
+julia> @multilinear f; f(x::Char...) = join(x, '#');
+
+julia> @multilinear g; g(x::Char...) = join(x, '@');
+
+julia> f('a', 'p', 'x')
+"a#p#x"
+
+julia> Tensor(f, g)(Tensor('a', 'b'), Tensor('p', 'q'), Tensor('x', 'y'))
+a#p#x⊗b@q@y
+```
 """
-@linear_kw function (tf::AbstractTensor)(tx::AbstractTensor;
-        coefftype = missing,
-        addto = missing,
+function (tf::AbstractTensor)(ttx::Vararg{AbstractTensor,N};
         coeff = ONE,
         is_filtered::Bool = false,
-        sizehint::Bool = true,
-        kw...)
+        kw...) where N
     n = length(tf)
-    n == length(tx) || error("wrong number of tensor components")
+    all(==(n), map(length, ttx)) || error("all tensor arguments of $tf must have $n components")
 
-    kwt = kw
-    if addto !== missing
-        hc2 = has_char2(_coefftype(addto))
-        kwt = push_kw(kwt; addto)
-    elseif coefftype !== missing
-        hc2 = has_char2(unval(coefftype))
-        kwt = push_kw(kwt; coefftype)
-    else
-        hc2 = false
+    tfx = map(Tuple(tf), map(Tuple, ttx)...) do f, x...
+        InnerKw(f; is_filtered, kw...)(x...)
     end
 
-    if !hc2
-        m = transpose_signexp(Tensor(tf, tx))
+    tensor_if = is_filtered && all(map(Tuple(tf), ttx, tfx) do f, tx, fx
+            fx isa AbstractLinear || keeps_filtered(f, map(typeof, Tuple(tx))...)
+    end)
+
+    if !has_char2(map(_coefftype, tfx)...; kw...)
+        m = transpose_signexp(Tensor(tf, ttx...))
         coeff = signed(m, coeff)
+    else
+        m = Zero()
     end
 
-    tfx = ntuple(n) do i
-        kwi = kw
-        if has_isfiltered(tf[i], typeof(tx[i]))
-            kwi = push_kw(kwi; is_filtered = true)
+    if haskey(kw, :addto) || haskey(kw, :coefftype)
+        tensor(tfx...; coeff, is_filtered = tensor_if, kw...)
+    else
+        R = promote_type(map(_coefftype, tfx)..., sign_type(typeof(m)))
+        if R === Sign
+            R = DefaultCoefftype
         end
-        if has_sizehint(tf[i], typeof(tx[i]))
-            kwi = push_kw(kwi; sizehint)
-        end
-        tf[i](tx[i]; kwi...)
+        tensor(tfx...; coefftype = Val(R), coeff, is_filtered = tensor_if, kw...)
     end
-
-    is_filtered = is_filtered && all(ntuple(n) do i
-            tx[i] isa AbstractLinear || keeps_filtered(tf[i], typeof(tx[i]))
-        end)
-
-    tensor(tfx...; coeff, is_filtered, kwt...)
 end
+
+hastrait(::AbstractTensor, ::Val, types...) = true
 
 #=
 # TODO: this poses problems with inference

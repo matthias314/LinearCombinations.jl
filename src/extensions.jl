@@ -336,6 +336,49 @@ end
 hastrait(f::ComposedFunctionOuterKw, trait::Val, types...) = hastrait(f.outer, trait, types...)
 
 #
+# InnerKw
+#
+
+struct InnerKw{F,KW}
+    f::F
+    kw::KW
+end
+
+InnerKw(f; kw...) = InnerKw(f, kw)
+
+function (f::InnerKw)(x...)
+    TT = map(typeof, x)
+    kwi = (;)
+    if has_isfiltered(f.f, TT...)
+        kwi = push_kw(kwi; is_filtered = get(f.kw, :is_filtered, false))
+    end
+    R = _coefftype(get(f.kw, :addto, missing))
+    if R === missing
+        R = unval(get(f.kw, :coefftype, missing))
+    end
+    if has_char2(R) && has_coefftype(f.f, TT...)
+        kwi = push_kw(kwi; coefftype = R)
+    end
+    f.f(x...; kwi...)
+end
+
+#
+# has_char2 including linear types, addto and coefftype
+#
+
+has_char2(::Type{L}) where {T,R,L<:AbstractLinear{T,R}} = has_char2(R)
+
+has_char2(::Val{R}) where R <: Type = has_char2(R)
+
+Base.@assume_effects :total function has_char2(types::Type...; kw...)
+    R = _coefftype(get(kw, :addto, missing))
+    R !== missing && return has_char2(R)
+    R = get(kw, :coefftype, missing)
+    R !== missing && return has_char2(R)
+    any(has_char2, types)
+end
+
+#
 # new type for linear extension
 #
 
@@ -425,14 +468,14 @@ end
 _length(x) = 1
 _length(a::AbstractLinear) = length(a)
 
-@generated function multilin(f::F, a...;
+@generated function multilin(f::F, a::Vararg{Any,N};
         coefftype = multilin_coeff_type(f, a),
         addto = zero(Linear{multilin_term_type(f, a), unval(coefftype)}),
             # TODO: we want coefftype::Type{R} and use "R" here, see julia #49367
         coeff = ONE,
         is_filtered = false,
         sizehint = true,
-        kw...) where F
+        kw...) where {F,N}
     N = length(a)
     TS = map(_termtype, a)
     quote
