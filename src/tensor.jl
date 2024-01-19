@@ -21,6 +21,30 @@ abstract type AbstractTensor{T<:Tuple} end
     Tuple(t::AbstractTensor{T}) -> T <: Tuple
 
 Return the tuple of components of `t`.
+
+Although any `AbstractTensor` has to supports the iteration interface,
+it is often more efficient to deal with the underlying `Tuple` of components.
+For instance, functions like `map` or `reduce` map return a `Tuple` in this case
+instead of a `Vector`.
+
+# Example
+
+```jldoctest
+julia> t = Tensor('A','b','c')
+A⊗b⊗c
+
+julia> Tuple(t)
+('A', 'b', 'c')
+
+julia> map(isuppercase, t)
+3-element Vector{Bool}:
+ 1
+ 0
+ 0
+
+julia> map(isuppercase, Tuple(t))
+(true, false, false)
+```
 """
 Base.Tuple(t::AbstractTensor) = error_missing(typeof(t))
 
