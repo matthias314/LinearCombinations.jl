@@ -674,16 +674,21 @@ show(io::IO, g::MultilinearExtension) = print(io, g.name)
 deg(g::MultilinearExtension) = deg(g.f)
 
 #
-# LinearComposedFunction
+# composition of linear functions
 #
 
-struct LinearComposedFunction{O,I}
+abstract type AbstractComposedFunction end
+
+keeps_filtered(f::AbstractComposedFunction, types...) = keeps_filtered(f.outer, return_type(f.inner, types...))
+
+deg(f::AbstractComposedFunction) = deg(f.outer) + deg(f.inner)
+
+return_type(f::AbstractComposedFunction, types...) = return_type(f.outer, return_type(f.inner, types...))
+
+struct LinearComposedFunction{O,I} <: AbstractComposedFunction
     outer::O
     inner::I
 end
-
-@linear f::LinearComposedFunction
-# @multilinear f::LinearComposedFunction
 
 function (f::LinearComposedFunction)(x...; kw...)
     y = InnerKw(f.inner, kw)(x...)
@@ -694,12 +699,15 @@ function (f::LinearComposedFunction)(x...; kw...)
     end
 end
 
-hastrait(f::LinearComposedFunction, trait::Val, types...) = hastrait(f.outer, trait, types...)
+hastrait(f::LinearComposedFunction, trait::Val, types...) = hastrait(f.outer, trait, return_type(f.inner, types...))
 hastrait(f::LinearComposedFunction, trait::Val{:is_filtered}, types...) = hastrait(f.inner, trait, types...)
 
-deg(f::LinearComposedFunction) = deg(f.outer) + deg(f.inner)
+struct TermComposedFunction{O,I} <: AbstractComposedFunction
+    outer::O
+    inner::I
+end
 
-return_type(f::LinearComposedFunction, types...) = return_type(f.outer, return_type(f.inner, types...))
+@multilinear f::TermComposedFunction LinearComposedFunction(f.outer, f.inner)
 
 #
 # InnerKw

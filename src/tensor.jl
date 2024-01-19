@@ -166,8 +166,17 @@ end
 
 Base.Tuple(t::Tensor) = t.a
 
-const Tensor_func = @Function(Tensor)
-keeps_filtered(::typeof(Tensor_func), T::Type...) = keeps_filtered(Tensor, T...)
+Tensor_func(x...) = Tensor(x)
+keeps_filtered(::typeof(Tensor_func), types...) = true
+
+Base.@assume_effects :total function return_type(::typeof(Tensor_func), types...)
+    UU = map(_termtype, types)
+    if all(isconcretetype, UU)
+        Tensor{Tuple{UU...}}
+    else
+        Tensor{T} where T<:Tuple{UU...}
+    end
+end
 
 # @multilinear tensor Tensor_func
 @multilinear_noesc tensor Tensor
@@ -441,7 +450,7 @@ end
 show(io::IO, g::TensorSlurp) = print(io, "TensorSlurp($(repr(g.f)))")
 
 # @multilinear g::TensorSlurp (x...; kw...) -> g.f(Tensor(x); kw...)
-@multilinear g::TensorSlurp LinearComposedFunction(g.f, Tensor_func)
+@multilinear g::TensorSlurp TermComposedFunction(g.f, Tensor_func)
 # @multilinear_noesc g::TensorSlurp LinearComposedFunction(g.f, Tensor{Tuple{TT...}})
 
 hastrait(g::TensorSlurp, prop::Val, T::Type...) = hastrait(g.f, prop, Tensor{Tuple{T...}})
