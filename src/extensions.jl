@@ -87,8 +87,8 @@ The setting for `keeps_filtered` doesn't matter in this case.
 
 See also [`$(@__MODULE__).linear_filter`](@ref).
 """
-keeps_filtered(f, ::Type...) = false
-keeps_filtered(::typeof(identity), ::Type) = true
+keeps_filtered(f, types...) = false
+keeps_filtered(::typeof(identity), type) = true
 
 function addtraits!(ex, def::Dict, traits)
     def[:name] = :($(@__MODULE__).hastrait)
@@ -325,41 +325,6 @@ macro linear(f)
             addto
         end
     end
-end
-
-#
-# linear extension of ComposedFunctionOuterKw
-#
-
-@linear f::ComposedFunctionOuterKw
-
-hastrait(f::ComposedFunctionOuterKw, trait::Val, types...) = hastrait(f.outer, trait, types...)
-
-#
-# InnerKw
-#
-
-struct InnerKw{F,KW}
-    f::F
-    kw::KW
-end
-
-InnerKw(f; kw...) = InnerKw(f, kw)
-
-function (f::InnerKw)(x...)
-    TT = map(typeof, x)
-    kwi = (;)
-    if has_isfiltered(f.f, TT...)
-        kwi = push_kw(kwi; is_filtered = get(f.kw, :is_filtered, false))
-    end
-    R = _coefftype(get(f.kw, :addto, missing))
-    if R === missing
-        R = unval(get(f.kw, :coefftype, missing))
-    end
-    if has_char2(R) && has_coefftype(f.f, TT...)
-        kwi = push_kw(kwi; coefftype = R)
-    end
-    f.f(x...; kwi...)
 end
 
 #
@@ -707,6 +672,69 @@ show(io::IO, g::MultilinearExtension) = print(io, g.name)
 # hastrait(g::MultilinearExtension, trait::Val, types...) = hastrait(g.f, trait, types...)
 
 deg(g::MultilinearExtension) = deg(g.f)
+
+#
+# LinearComposedFunction
+#
+
+struct LinearComposedFunction{O,I}
+    outer::O
+    inner::I
+end
+
+@linear f::LinearComposedFunction
+# @multilinear f::LinearComposedFunction
+
+function (f::LinearComposedFunction)(x...; kw...)
+    y = InnerKw(f.inner, kw)(x...)
+    if get(kw, :is_filtered, false) && has_isfiltered(f.outer, typeof(y))
+        f.outer(y; kw..., :is_filtered => keeps_filtered(f.inner, map(typeof, x)...))
+    else
+        f.outer(y; kw...)
+    end
+end
+
+hastrait(f::LinearComposedFunction, trait::Val, types...) = hastrait(f.outer, trait, types...)
+hastrait(f::LinearComposedFunction, trait::Val{:is_filtered}, types...) = hastrait(f.inner, trait, types...)
+
+deg(f::LinearComposedFunction) = deg(f.outer) + deg(f.inner)
+
+return_type(f::LinearComposedFunction, types...) = return_type(f.outer, return_type(f.inner, types...))
+
+#
+# InnerKw
+#
+
+struct InnerKw{F,KW}
+    f::F
+    kw::KW
+end
+
+InnerKw(f; kw...) = InnerKw(f, kw)
+
+function (f::InnerKw)(x...)
+    TT = map(typeof, x)
+    kwi = (;)
+    if has_isfiltered(f.f, TT...)
+        kwi = push_kw(kwi; is_filtered = get(f.kw, :is_filtered, false))
+    end
+    R = _coefftype(get(f.kw, :addto, missing))
+    if R === missing
+        R = unval(get(f.kw, :coefftype, missing))
+    end
+    if has_char2(R) && has_coefftype(f.f, TT...)
+        kwi = push_kw(kwi; coefftype = R)
+    end
+    f.f(x...; kwi...)
+end
+
+hastrait(f::InnerKw, trait::Val, types...) = hastrait(f.f, trait, types...)
+
+keeps_filtered(f::InnerKw, types...) = keeps_filtered(f.f, types...)
+
+deg(f::InnerKw) = deg(f.f)
+
+# return_type(f::InnerKw, types...) = return_type(f.f, types...)
 
 #
 # bilinear and multilinear extension of multiplication

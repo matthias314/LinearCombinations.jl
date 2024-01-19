@@ -441,10 +441,12 @@ end
 show(io::IO, g::TensorSlurp) = print(io, "TensorSlurp($(repr(g.f)))")
 
 # @multilinear g::TensorSlurp (x...; kw...) -> g.f(Tensor(x); kw...)
-@multilinear g::TensorSlurp ComposedFunctionOuterKw(g.f, Tensor_func)
-# @multilinear_noesc g::TensorSlurp ComposedFunctionOuterKw(g.f, Tensor{Tuple{TT...}})
+@multilinear g::TensorSlurp LinearComposedFunction(g.f, Tensor_func)
+# @multilinear_noesc g::TensorSlurp LinearComposedFunction(g.f, Tensor{Tuple{TT...}})
 
 hastrait(g::TensorSlurp, prop::Val, T::Type...) = hastrait(g.f, prop, Tensor{Tuple{T...}})
+
+keeps_filtered(g::TensorSlurp, T::Type...) = keeps_filtered(g.f, Tensor{Tuple{T...}})
 
 deg(g::TensorSlurp) = deg(g.f)
 
@@ -503,6 +505,8 @@ show(io::IO, g::TensorSplat) = print(io, "TensorSplat($(repr(g.f)))")
 @linear g::TensorSplat
 
 hastrait(g::TensorSplat, prop::Val, ::Type{<:AbstractTensor{T}}) where T <: Tuple = hastrait(g.f, prop, fieldtypes(T)...)
+
+keeps_filtered(g::TensorSplat, ::Type{<:AbstractTensor{T}}) where T <: Tuple = keeps_filtered(g.f, fieldtypes(T)...)
 
 deg(g::TensorSplat) = deg(g.f)
 

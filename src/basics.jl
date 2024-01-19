@@ -48,13 +48,6 @@ Char
 unval(x) = x
 unval(::Val{c}) where c = c
 
-struct ComposedFunctionOuterKw{O,I}
-    outer::O
-    inner::I
-end
-
-(f::ComposedFunctionOuterKw)(x...; kw...) = f.outer(f.inner(x...); kw...)
-
 promote_typejoin(T...) = foldl(Base.promote_typejoin, T)
 
 push_kw(nt; kw...) = (; nt..., kw...)
