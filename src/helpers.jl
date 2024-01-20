@@ -1,9 +1,33 @@
 module TestHelpers
 
 using ..LinearCombinations
-import LinearCombinations: zero, getcoeff, setcoeff!, length, iterate
+
+# ShowArgs
+
+export ShowArgs
+
+import LinearCombinations: hastrait, keeps_filtered, deg
+
+struct ShowArgs{F}
+    f::F
+end
+
+function (f::ShowArgs)(args...; kw...)
+    println("$(f.f): $args $(NamedTuple(kw))")
+    f.f(args...; kw...)
+end
+
+hastrait(f::ShowArgs, trait::Val, types...) = hastrait(f.f, trait, types...)
+
+keeps_filtered(f::ShowArgs, types...) = keeps_filtered(f.f, types...)
+
+deg(f::ShowArgs) = deg(f.f)
+
+# BasisLinear
 
 export BasicLinear
+
+import LinearCombinations: zero, getcoeff, setcoeff!, length, iterate
 
 struct BasicLinear{T,R} <: AbstractLinear{T,R}
     a::Linear{T,R}
