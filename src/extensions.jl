@@ -120,7 +120,7 @@ f(x::Char) = Linear(uppercase(x) => 1, x => -1)
 
 @linear f
 
-using LinearCombinations: unval   # unwraps a Val argument
+using $(@__MODULE__): unval   # unwraps a Val argument
 
 @linear_kw function g(x::Char;
         coefftype = Int,
@@ -150,7 +150,7 @@ julia> g(a; coefftype = Float64, coeff = 2)
 ```
 Test whether keywords have been registered:
 ```jldoctest addto-coeff
-julia> using LinearCombinations: has_coefftype, has_addto_coeff, has_sizehint
+julia> using $(@__MODULE__): has_coefftype, has_addto_coeff, has_sizehint
 
 julia> has_coefftype(g, Char), has_addto_coeff(g, Char), has_sizehint(g, Char)
 (true, true, false)
@@ -749,7 +749,7 @@ deg(f::InnerKw) = deg(f.f)
 #
 
 """
-    LinearCombinations.mul(x1::Any, x2::Any, ...)
+    $(@__MODULE__).mul(x1::Any, x2::Any, ...)
 
 Return the product of the arguments. This is the multilinear extension of `*`.
 

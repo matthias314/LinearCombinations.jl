@@ -120,7 +120,7 @@ export Tensor, tensor, ⊗, cat, flatten
 The type `Tensor` represents pure tensors.
 
 A general tensor is a linear combination of pure tensors and can conveniently be
-created using `tensor`. `LinearCombinations` takes pure tensors as basis elements.
+created using `tensor`. `$(@__MODULE__)` takes pure tensors as basis elements.
 
 A `Tensor` can be created out of a `Tuple` or out of the individual components.
 The second form is not available if the tensor has a tuple as its only component.
@@ -316,7 +316,7 @@ julia> transpose(t)
 As usual, the degree of a `String` is its length.
 
 ```jldoctest transpose
-julia> LinearCombinations.deg(x::String) = length(x)
+julia> $(@__MODULE__).deg(x::String) = length(x)
 
 julia> transpose(t)   # same t as before
 -(a⊗x)⊗(b⊗y)⊗(c⊗z)
@@ -360,7 +360,7 @@ See also: [`$(@__MODULE__).DefaultCoefftype`](@ref).
 # Example
 
 ```jldoctest
-julia> import LinearCombinations: deg
+julia> import $(@__MODULE__): deg
 
 julia> deg(x::String) = length(x);
 
@@ -398,7 +398,7 @@ See also: [`coprod`](@ref), [`$(@__MODULE__).DefaultCoefftype`](@ref).
 
 # Example
 ```jldoctest
-julia> import LinearCombinations: deg, coprod
+julia> import $(@__MODULE__): deg, coprod
 
 julia> deg(x::String) = length(x);
 
@@ -564,7 +564,7 @@ See also [`flatten`](@ref).
 # Example
 
 ```jldoctest
-julia> LinearCombinations.cat(Tensor('x'), Tensor('y', Tensor('z', 'w')))
+julia> $(@__MODULE__).cat(Tensor('x'), Tensor('y', Tensor('z', 'w')))
 x⊗y⊗(z⊗w)
 ```
 """
@@ -665,7 +665,7 @@ julia> h(tensor(a, b))
 
 We again take the length of a `String` as its degree.
 ```jldoctest tensorcall
-julia> import LinearCombinations: deg
+julia> import $(@__MODULE__): deg
 
 julia> deg(x::String) = length(x);
 
@@ -780,7 +780,7 @@ See also [`diff`](@ref), [`$(@__MODULE__).DefaultCoefftype`](@ref).
 
 As usual, the degree of a string is its length.
 ```jldoctest
-julia> import LinearCombinations: deg, diff
+julia> import $(@__MODULE__): deg, diff
 
 julia> deg(x::String) = length(x);
 

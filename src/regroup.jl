@@ -68,7 +68,7 @@ const RegroupCacheEltype = NamedTuple{(:expr, :args, :perm), Tuple{Expr, Vector{
 const regroup_cache = IdDict{Any,RegroupCacheEltype}()
 
 """
-    LinearCombinations.Regroup{A, B}
+    $(@__MODULE__).Regroup{A, B}
 
 Applying a `Regroup` object to a Tensor or a linear combinations of tensors rearranges
 the components of the tensor. Use `regroup` to create a `Regroup` object. It is possible
@@ -131,7 +131,7 @@ julia> rg(t)
 
 For simplicity, we define the degree of a `String` to be its length.
 ```jldoctest regroup
-julia> LinearCombinations.deg(x::String) = length(x)
+julia> $(@__MODULE__).deg(x::String) = length(x)
 
 julia> rg(t)   # same rg and t as before
 -(z⊗x)⊗(w⊗y)
@@ -197,7 +197,7 @@ julia> swap(a; coeff = 2)
 
 For simplicity, we define the degree of a `String` to be its length.
 ```jldoctest swap
-julia> LinearCombinations.deg(x::String) = length(x)
+julia> $(@__MODULE__).deg(x::String) = length(x)
 
 julia> swap(t)   # same t as before
 -z⊗x
