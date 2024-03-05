@@ -7,10 +7,17 @@ version = "0.4.0"
 StructEqualHash = "8bd03d06-bfef-4aaf-8250-1a26cbb401bf"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 
+[weakdeps]
+Modulo2 = "7e4462cd-8001-4c22-b109-db8e4e581e9c"
+
+[extensions]
+Modulo2Ext = "Modulo2"
+
 [compat]
 julia = "1.10"
 StructEqualHash = "0.1"
 MacroTools = "0.5"
+Modulo2 = "0.2"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
