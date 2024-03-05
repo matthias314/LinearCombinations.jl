@@ -63,7 +63,7 @@ swap(t)
 ```
 We finally take the tensor product of the functions `f` and `g` and apply it to `t`.
 ```@repl intro
-const k = tensormap(f, g)
+const k = Tensor(f, g)
 k(Tensor('x', 'z'))
 k(t)
 ```

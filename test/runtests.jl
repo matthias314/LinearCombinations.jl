@@ -502,6 +502,8 @@ end
 f0(x) = uppercase(x)
 g0(x) = Linear(f0(x) => 2.0)
 
+const tensormap = Tensor
+
 @testset "tensormap deg 0 0" begin
     h = tensormap()
     t = Tensor()

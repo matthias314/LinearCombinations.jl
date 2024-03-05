@@ -606,7 +606,6 @@ keeps_filtered(::typeof(flatten), ::Type{<:AbstractTensor}) = true
 # tensor product of maps
 #
 
-export tensormap
 
 struct TensorMap{T<:Tuple,DS<:Tuple} <: AbstractTensor{T}
     ff::T
