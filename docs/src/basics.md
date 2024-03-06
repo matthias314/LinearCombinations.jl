@@ -10,9 +10,10 @@ DocTestSetup = doctestsetup
 deg(::Any)
 ```
 
-## Traits for rings
+## Traits and functions for rings
 
 ```@docs
 LinearCombinations.has_char2
 LinearCombinations.is_domain
+LinearCombinations.signed
 ```

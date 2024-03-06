@@ -189,6 +189,15 @@ See also [`is_domain`](@ref).
 has_char2(::Type) = false
 has_char2(::Missing) = false
 
+"""
+    LinearCombinations.signed(k, x)
+
+Return a value representing `(-1)^k*x`. The default definition is
+```julia
+signed(k, x::R) where R = has_char2(R) || iseven(k) ? x : -x
+```
+Additional methods may be needed to support more exotic coefficient types.
+"""
 signed(k, x::R) where R = has_char2(R) || iseven(k) ? x : -x
 
 sum0(itr) = sum(itr; init = Zero())
