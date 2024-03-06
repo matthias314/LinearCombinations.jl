@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Tensors · LinearCombinations.jl</title><meta name="title" content="Tensors · LinearCombinations.jl"/><meta property="og:title" content="Tensors · LinearCombinations.jl"/><meta property="twitter:title" content="Tensors · LinearCombinations.jl"/><meta name="description" content="Documentation for LinearCombinations.jl."/><meta property="og:description" content="Documentation for LinearCombinations.jl."/><meta property="twitter:description" content="Documentation for LinearCombinations.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">LinearCombinations.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Overview</a></li><li><a class="tocitem" href="../linear/">Linear combinations</a></li><li><a class="tocitem" href="../basis/">Bases</a></li><li class="is-active"><a class="tocitem" href>Tensors</a><ul class="internal"><li><a class="tocitem" href="#Constructors"><span>Constructors</span></a></li><li><a class="tocitem" href="#Manipulating-tensors"><span>Manipulating tensors</span></a></li><li><a class="tocitem" href="#Calling-tensors"><span>Calling tensors</span></a></li><li><a class="tocitem" href="#Other-functions-accepting-tensors"><span>Other functions accepting tensors</span></a></li></ul></li><li><a class="tocitem" href="../extensions/">Linear and multilinear functions</a></li><li><a class="tocitem" href="../basics/">Basic functions</a></li><li><a class="tocitem" href="../internals/">Internals</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Tensors</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Tensors</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/matthias314/LinearCombinations.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/matthias314/LinearCombinations.jl/blob/master/docs/src/tensor.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Tensors"><a class="docs-heading-anchor" href="#Tensors">Tensors</a><a id="Tensors-1"></a><a class="docs-heading-anchor-permalink" href="#Tensors" title="Permalink"></a></h1><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="LinearCombinations.AbstractTensor" href="#LinearCombinations.AbstractTensor"><code>LinearCombinations.AbstractTensor</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">AbstractTensor{T&lt;:Tuple}</code></pre><p>The supertype of all tensor types. Currently the only subtype is <code>Tensor</code>.</p><p>See <a href="#LinearCombinations.Tensor"><code>Tensor</code></a>, <a href="#LinearCombinations.tensor"><code>tensor</code></a>, <a href="#Core.Tuple-Tuple{AbstractTensor}"><code>Tuple(t::AbstractTensor)</code></a>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/tensor.jl#L9-L15">source</a></section></article><h2 id="Constructors"><a class="docs-heading-anchor" href="#Constructors">Constructors</a><a id="Constructors-1"></a><a class="docs-heading-anchor-permalink" href="#Constructors" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="LinearCombinations.Tensor" href="#LinearCombinations.Tensor"><code>LinearCombinations.Tensor</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">Tensor{T&lt;:Tuple}
+
+Tensor{T}(xs...) where T
+Tensor(xs...)</code></pre><p>The type <code>Tensor</code> represents pure tensors.</p><p>A general tensor is a linear combination of pure tensors and can conveniently be created using <code>tensor</code>. <code>LinearCombinations</code> takes pure tensors as basis elements.</p><p>A <code>Tensor</code> can be created out of a <code>Tuple</code> or out of the individual components. The second form is not available if the tensor has a tuple as its only component.</p><p><code>Tensor</code> implements the <a href="https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-iteration">iteration</a> and <a href="https://docs.julialang.org/en/v1/manual/interfaces/#Indexing">indexing</a> interfaces. This makes for example splatting available for tensors, and the <code>i</code>-th component of <code>t::Tensor</code> can be accessed as <code>t[i]</code>.</p><p>Tensors can be nested. Different bracketings lead to different tensors. The functions <code>cat</code>, <code>flatten</code>, <code>swap</code> and <code>regroup</code> are provided to make rearranging tensors more easily.</p><p>Note that the type parameter of <code>Tensor</code> is always a <code>Tuple</code>. For instance, the type of a <code>Tensor</code> with two components of types <code>T1</code> and <code>T2</code> is <code>Tensor{Tuple{T1,T2}}</code>, not <code>Tensor{T1,T2}</code>.</p><p>See also <a href="#LinearCombinations.tensor"><code>tensor</code></a>, <a href="#LinearCombinations.cat"><code>cat</code></a>, <a href="#LinearCombinations.flatten"><code>flatten</code></a>, <a href="#LinearCombinations.regroup"><code>regroup</code></a>, <a href="#LinearCombinations.swap"><code>swap</code></a>.</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; t = Tensor(&#39;x&#39;, &#39;y&#39;, &quot;z&quot;)
+x⊗y⊗z
+
+julia&gt; typeof(t)
+Tensor{Tuple{Char, Char, String}}
+
+julia&gt; Tuple(t)
+(&#39;x&#39;, &#39;y&#39;, &quot;z&quot;)
+
+julia&gt; length(t), t[2], t[end]
+(3, &#39;y&#39;, &quot;z&quot;)
+
+julia&gt; a = Linear(&#39;x&#39; =&gt; 1, &#39;y&#39; =&gt; 2)
+x+2*y
+
+julia&gt; b = Linear(Tensor(&#39;x&#39;, &#39;z&#39;) =&gt; 1, Tensor(&#39;y&#39;, &#39;z&#39;) =&gt; 2)
+x⊗z+2*y⊗z
+
+julia&gt; b == tensor(a, &#39;z&#39;)
+true
+
+julia&gt; [uppercase(x) for x in t]
+3-element Vector{Any}:
+ &#39;X&#39;: ASCII/Unicode U+0058 (category Lu: Letter, uppercase)
+ &#39;Y&#39;: ASCII/Unicode U+0059 (category Lu: Letter, uppercase)
+ &quot;Z&quot;
+
+julia&gt; f((x1, xs...)::Tensor) = x1
+f (generic function with 1 method)
+
+julia&gt; f(t)
+&#39;x&#39;: ASCII/Unicode U+0078 (category Ll: Letter, lowercase)
+
+julia&gt; t == Tensor(Tensor(&#39;x&#39;, &#39;y&#39;), &quot;z&quot;)
+false
+
+julia&gt; a = tensor(); a[Tensor()]
+1</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/tensor.jl#L114-L186">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="LinearCombinations.tensor" href="#LinearCombinations.tensor"><code>LinearCombinations.tensor</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">tensor(xs...) -&gt; Linear{Tensor}
+x1 ⊗ x2 ⊗ ... -&gt; Linear{Tensor}</code></pre><p><code>tensor</code> is the multilinear extension of <code>Tensor</code>. <code>⊗</code> is a synomym for <code>tensor</code>. Note that <code>tensor</code> always returns a linear combination.</p><p>See also <a href="#LinearCombinations.Tensor"><code>Tensor</code></a>, <a href="../extensions/#LinearCombinations.@multilinear"><code>@multilinear</code></a></p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; a, b = Linear(&#39;x&#39; =&gt; 1, &#39;y&#39; =&gt; 2), Linear(&quot;w&quot; =&gt; 3, &quot;z&quot; =&gt; -1)
+(x+2*y, 3*w-z)
+
+julia&gt; tensor(a, &quot;w&quot;)
+x⊗w+2*y⊗w
+
+julia&gt; tensor(a, b)
+-2*y⊗z+3*x⊗w-x⊗z+6*y⊗w
+
+julia&gt; tensor(&#39;x&#39;, b, a; coefftype = Float64)
+-2.0*x⊗z⊗y-x⊗z⊗x+6.0*x⊗w⊗y+3.0*x⊗w⊗x
+
+julia&gt; a = tensor(); a[Tensor()]
+1</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/tensor.jl#L209-L236">source</a></section></article><h2 id="Manipulating-tensors"><a class="docs-heading-anchor" href="#Manipulating-tensors">Manipulating tensors</a><a id="Manipulating-tensors-1"></a><a class="docs-heading-anchor-permalink" href="#Manipulating-tensors" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="Core.Tuple-Tuple{AbstractTensor}" href="#Core.Tuple-Tuple{AbstractTensor}"><code>Core.Tuple</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia hljs">Tuple(t::AbstractTensor{T}) -&gt; T &lt;: Tuple</code></pre><p>Return the tuple of components of <code>t</code>.</p><p>Although any <code>AbstractTensor</code> has to supports the iteration interface, it is often more efficient to deal with the underlying <code>Tuple</code> of components. For instance, functions like <code>map</code> or <code>reduce</code> map return a <code>Tuple</code> in this case instead of a <code>Vector</code>.</p><p><strong>Example</strong></p><pre><code class="language-julia-repl hljs">julia&gt; t = Tensor(&#39;A&#39;,&#39;b&#39;,&#39;c&#39;)
+A⊗b⊗c
+
+julia&gt; Tuple(t)
+(&#39;A&#39;, &#39;b&#39;, &#39;c&#39;)
+
+julia&gt; map(isuppercase, t)
+3-element Vector{Bool}:
+ 1
+ 0
+ 0
+
+julia&gt; map(isuppercase, Tuple(t))
+(true, false, false)</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/tensor.jl#L20-L48">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="LinearCombinations.cat" href="#LinearCombinations.cat"><code>LinearCombinations.cat</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">cat(t::AbstractTensor...) -&gt; Tensor</code></pre><p>Concatenate the tensors given as arguments. This function is multilinear.</p><p>See also <a href="#LinearCombinations.flatten"><code>flatten</code></a>.</p><p><strong>Example</strong></p><pre><code class="language-julia-repl hljs">julia&gt; LinearCombinations.cat(Tensor(&#39;x&#39;), Tensor(&#39;y&#39;, Tensor(&#39;z&#39;, &#39;w&#39;)))
+x⊗y⊗(z⊗w)</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/tensor.jl#L557-L570">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="LinearCombinations.flatten" href="#LinearCombinations.flatten"><code>LinearCombinations.flatten</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">flatten(t::AbstractTensor) -&gt; Tensor
+flatten(a::AbstractLinear{&lt;:AbstractTensor}) -&gt; AbstractLinear{Tensor}</code></pre><p>Recursively take all tensor components and concatenate the result. This function is linear.</p><p>See also <a href="#LinearCombinations.cat"><code>cat</code></a>.</p><p><strong>Example</strong></p><pre><code class="language-julia-repl hljs">julia&gt; t = Tensor(&#39;x&#39;, Tensor(&#39;y&#39;, Tensor(&#39;z&#39;, &#39;w&#39;)))
+x⊗(y⊗(z⊗w))
+
+julia&gt; flatten(t)
+x⊗y⊗z⊗w</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/tensor.jl#L581-L599">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="LinearCombinations.swap" href="#LinearCombinations.swap"><code>LinearCombinations.swap</code></a> — <span class="docstring-category">Constant</span></header><section><div><pre><code class="language-julia hljs">swap(t::AbstractTensor{Tuple{T1,T2}}) where {T1,T2} -&gt; AbstractLinear{Tensor{Tuple{T2,T1}}}
+swap(a::AbstractLinear{AbstractTensor{Tuple{T1,T2}})}) where {T1,T2}
+    -&gt; AbstractLinear{Tensor{Tuple{T1,T2}})}</code></pre><p>This linear function swaps the components of two-component tensors. If the two components of a tensor <code>t</code> have non-zero degrees, then the usual sign <code>(-1)^(deg(t[1])*deg(t[2]))</code> is introduced. By default, all terms have zero degree.</p><p>Note that <code>swap</code> is a special case of <code>regroup</code>:  it is simply defined as <code>regroup(:((1, 2)), :((2, 1)))</code>.</p><p>See also <a href="#LinearCombinations.Tensor"><code>Tensor</code></a>, <a href="../basics/#LinearCombinations.deg-Tuple{Any}"><code>deg</code></a>, <a href="#LinearCombinations.regroup"><code>regroup</code></a>, <a href="../extensions/#LinearCombinations.DefaultCoefftype"><code>LinearCombinations.DefaultCoefftype</code></a>.</p><p><strong>Examples</strong></p><p><strong>Examples without degrees</strong></p><pre><code class="language-julia-repl hljs">julia&gt; t = Tensor(&quot;x&quot;, &quot;z&quot;)
+x⊗z
+
+julia&gt; swap(t)
+z⊗x
+
+julia&gt; a = Linear(&quot;x&quot; =&gt; 1, &quot;yy&quot; =&gt; 1) ⊗ Linear(&quot;z&quot; =&gt; 1, &quot;ww&quot; =&gt; 1)
+yy⊗ww+x⊗ww+x⊗z+yy⊗z
+
+julia&gt; swap(a)
+ww⊗yy+z⊗x+z⊗yy+ww⊗x
+
+julia&gt; swap(a; coeff = 2)
+2*ww⊗yy+2*z⊗x+2*z⊗yy+2*ww⊗x</code></pre><p><strong>Examples with degrees</strong></p><p>For simplicity, we define the degree of a <code>String</code> to be its length.</p><pre><code class="language-julia-repl hljs">julia&gt; LinearCombinations.deg(x::String) = length(x)
+
+julia&gt; swap(t)   # same t as before
+-z⊗x
+
+julia&gt; swap(a)   # same a as before
+ww⊗yy-z⊗x+z⊗yy+ww⊗x</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/regroup.jl#L163-L208">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="LinearCombinations.Regroup" href="#LinearCombinations.Regroup"><code>LinearCombinations.Regroup</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">LinearCombinations.Regroup{A, B}</code></pre><p>Applying a <code>Regroup</code> object to a Tensor or a linear combinations of tensors rearranges the components of the tensor. Use <code>regroup</code> to create a <code>Regroup</code> object. It is possible to define additional methods to apply <code>Regroup</code> objects to other arguments besides tensors.</p><p>See also <a href="#LinearCombinations.regroup"><code>regroup</code></a>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/regroup.jl#L70-L78">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="LinearCombinations.regroup" href="#LinearCombinations.regroup"><code>LinearCombinations.regroup</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">regroup(a, b) -&gt; Regroup</code></pre><p>Return a <code>Regroup</code> object that can be used to rearrange the components of tensors and possibly other structures.</p><p>The actual rearrangement is specified by the two parameters <code>a</code> and <code>b</code>. Both are expression trees consisting of nested tuples of integers. These trees encode the structure of nested tensors, and the integers specify a mapping from the components of the nested source tensor to the nested target tensor. The labels for <code>a</code> and <code>b</code> can in fact be of any <code>isbits</code> type instead of <code>Int</code>, but they must be the same for <code>a</code> and <code>b</code>.</p><p>The return value <code>rg = regroup(a, b)</code> is a callable object. An argument <code>t</code> for <code>rg</code> must be a nested tensor of the same shape as the <code>a</code> tree, and the return value is a <code>Tensor</code> of the same shape as <code>b</code>. The components of the nested tensor <code>t</code> are permuted according to the labels.</p><p>If the components of <code>t</code> have non-zero degrees, then <code>rg(t)</code> additionally has a sign according to the usual sign rule: whenever two ojects <code>x</code> and <code>y</code> are swapped, then this incurs the sign <code>(-1)^(deg(x)*(deg(y)))</code>.</p><p>Moreover, <code>rg</code> is linear and can be called with linear combinations of tensors.</p><p>Note that for each <code>Regroup</code> element <code>rg</code>, Julia generates separate, efficient code for computing <code>rg(t)</code>.</p><p>See also <a href="#LinearCombinations.swap"><code>swap</code></a>, <a href="#LinearCombinations.regroup_inv"><code>regroup_inv</code></a>, <a href="#LinearCombinations.Regroup"><code>Regroup</code></a>, <a href="../extensions/#LinearCombinations.DefaultCoefftype"><code>LinearCombinations.DefaultCoefftype</code></a>.</p><p><strong>Examples</strong></p><p><strong>Example without degrees</strong></p><pre><code class="language-julia-repl hljs">julia&gt; rg = regroup(:( (1, (2, 3), 4) ), :( ((3, 1), (4, 2)) ))
+Regroup{(1, (2, 3), 4),((3, 1), (4, 2))}
+
+julia&gt; t = Tensor(&quot;x&quot;, Tensor(&quot;y&quot;, &quot;z&quot;), &quot;w&quot;)
+x⊗(y⊗z)⊗w
+
+julia&gt; rg(t)
+(z⊗x)⊗(w⊗y)</code></pre><p><strong>Example with degrees</strong></p><p>For simplicity, we define the degree of a <code>String</code> to be its length.</p><pre><code class="language-julia-repl hljs">julia&gt; LinearCombinations.deg(x::String) = length(x)
+
+julia&gt; rg(t)   # same rg and t as before
+-(z⊗x)⊗(w⊗y)</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/regroup.jl#L88-L139">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="LinearCombinations.regroup_inv" href="#LinearCombinations.regroup_inv"><code>LinearCombinations.regroup_inv</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">regroup_inv(a, b) -&gt; Tuple{Regroup,Regroup}</code></pre><p>Return the tuple <code>(regroup(a, b), regroup(b, a))</code>.</p><p>See also <a href="#LinearCombinations.regroup"><code>regroup</code></a>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/regroup.jl#L154-L160">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="Base.transpose" href="#Base.transpose"><code>Base.transpose</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">transpose(t::AbstractTensor{T}) where T &lt;: Tuple{Vararg{AbstractTensor}}</code></pre><p>Return the transpose of a tensor <code>t</code> whose components are tensors of the same length. In other words, the component <code>transpose(t)[i][j]</code> is <code>t[j][i]</code>. If the components <code>t[i][j]</code> have non-zero degrees, a sign is added according to the usual sign rule. The tensor <code>t</code> must have at least one component. If all component tensors are empty, then the empty tensor <code>Tensor()</code> is returned.</p><p>This function is linear.</p><p><strong>Examples</strong></p><p><strong>Example without signs</strong></p><pre><code class="language-julia-repl hljs">julia&gt; t = Tensor(Tensor(&quot;a&quot;, &quot;b&quot;, &quot;c&quot;), Tensor(&quot;x&quot;, &quot;y&quot;, &quot;z&quot;))
+(a⊗b⊗c)⊗(x⊗y⊗z)
+
+julia&gt; transpose(t)
+(a⊗x)⊗(b⊗y)⊗(c⊗z)</code></pre><p><strong>Example with signs</strong></p><p>As usual, the degree of a <code>String</code> is its length.</p><pre><code class="language-julia-repl hljs">julia&gt; LinearCombinations.deg(x::String) = length(x)
+
+julia&gt; transpose(t)   # same t as before
+-(a⊗x)⊗(b⊗y)⊗(c⊗z)</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/tensor.jl#L290-L324">source</a></section></article><h2 id="Calling-tensors"><a class="docs-heading-anchor" href="#Calling-tensors">Calling tensors</a><a id="Calling-tensors-1"></a><a class="docs-heading-anchor-permalink" href="#Calling-tensors" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="LinearCombinations.AbstractTensor-Tuple{AbstractTensor}" href="#LinearCombinations.AbstractTensor-Tuple{AbstractTensor}"><code>LinearCombinations.AbstractTensor</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia hljs">(tf::AbstractTensor)(tx::AbstractTensor...) -&gt; Tensor</code></pre><p>Evaluating an <code>AbstractTensor</code> on other <code>AbstractTensor</code>s (with the same number of components) is done componentwise. If the degrees of the components and the maps are not all zero, then the usual sign is introduced: whenever a map <code>f</code> is moved past a component <code>x</code>, then this changes the sign by <code>(-1)^(deg(f)*deg(x))</code>.</p><p><strong>Examples</strong></p><p><strong>Examples without degrees</strong></p><pre><code class="language-julia-repl hljs">julia&gt; @linear f; f(x) = uppercase(x)
+f (generic function with 2 methods)
+
+julia&gt; @linear g; g(x) = lowercase(x)
+g (generic function with 2 methods)
+
+julia&gt; const h = Tensor(f, g)
+f⊗g
+
+julia&gt; a, b = Linear(&#39;x&#39; =&gt; 1, &#39;y&#39; =&gt; 2), Linear(&#39;Z&#39; =&gt; -1, &#39;W&#39; =&gt; 3)
+(x+2*y, -Z+3*W)
+
+julia&gt; h(Tensor(&#39;x&#39;, &#39;Z&#39;))
+X⊗z
+
+julia&gt; h(tensor(a, b))
+6*Y⊗w-2*Y⊗z+3*X⊗w-X⊗z</code></pre><p><strong>Examples with degrees</strong></p><p>We again take the length of a <code>String</code> as its degree.</p><pre><code class="language-julia-repl hljs">julia&gt; import LinearCombinations: deg
+
+julia&gt; deg(x::String) = length(x);
+
+julia&gt; struct P{T} y::T end; deg(p::P) = deg(p.y);
+
+julia&gt; @linear p::P; (p::P)(x) = x * p.y
+
+julia&gt; p = P(&quot;pp&quot;); q = P(&quot;qqq&quot;)
+P{String}(&quot;qqq&quot;)
+
+julia&gt; j = Tensor(p, q)
+P{String}(&quot;pp&quot;)⊗P{String}(&quot;qqq&quot;)
+
+julia&gt; j(Tensor(&quot;x&quot;, &quot;yy&quot;))
+-xpp⊗yyqqq
+
+julia&gt; a = Linear(&quot;x&quot; =&gt; 1, &quot;yy&quot; =&gt; 2)
+x+2*yy
+
+julia&gt; b = tensor(a, a)
+2*x⊗yy+4*yy⊗yy+x⊗x+2*yy⊗x
+
+julia&gt; j(b)
+-xpp⊗xqqq-2*xpp⊗yyqqq+2*yypp⊗xqqq+4*yypp⊗yyqqq</code></pre><p><strong>A multilinear example</strong></p><pre><code class="language-julia-repl hljs">julia&gt; @multilinear f; f(x::Char...) = join(x, &#39;#&#39;);
+
+julia&gt; @multilinear g; g(x::Char...) = join(x, &#39;@&#39;);
+
+julia&gt; f(&#39;a&#39;, &#39;p&#39;, &#39;x&#39;)
+&quot;a#p#x&quot;
+
+julia&gt; Tensor(f, g)(Tensor(&#39;a&#39;, &#39;b&#39;), Tensor(&#39;p&#39;, &#39;q&#39;), Tensor(&#39;x&#39;, &#39;y&#39;))
+a#p#x⊗b@q@y</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/tensor.jl#L631-L707">source</a></section></article><h2 id="Other-functions-accepting-tensors"><a class="docs-heading-anchor" href="#Other-functions-accepting-tensors">Other functions accepting tensors</a><a id="Other-functions-accepting-tensors-1"></a><a class="docs-heading-anchor-permalink" href="#Other-functions-accepting-tensors" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="LinearCombinations.deg-Tuple{AbstractTensor}" href="#LinearCombinations.deg-Tuple{AbstractTensor}"><code>LinearCombinations.deg</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia hljs">deg(t::AbstractTensor)</code></pre><p>Return the degree of a tensor, which is the sum of the degrees of its components.</p><p>See also <a href="../basics/#LinearCombinations.deg-Tuple{Any}"><code>deg</code></a>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/tensor.jl#L76-L82">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="Base.:*-Tuple{AbstractTensor, AbstractTensor}" href="#Base.:*-Tuple{AbstractTensor, AbstractTensor}"><code>Base.:*</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia hljs">*(t1::AbstractTensor , t2::AbstractTensor, ...)</code></pre><p>Return the product of the tensors, computed from the products of its components. Signs are introduced according to the usual sign rule. If all degrees are integers, then the coefficient type is <code>DefaultCoefftype</code>.</p><p>This function is linear.</p><p>See also: <a href="../extensions/#LinearCombinations.DefaultCoefftype"><code>LinearCombinations.DefaultCoefftype</code></a>.</p><p><strong>Example</strong></p><pre><code class="language-julia-repl hljs">julia&gt; import LinearCombinations: deg
+
+julia&gt; deg(x::String) = length(x);
+
+julia&gt; (s, t) = Tensor(&quot;ab&quot;, &quot;c&quot;), Tensor(&quot;x&quot;, &quot;yz&quot;)
+(ab⊗c, x⊗yz)
+
+julia&gt; s*t
+-abx⊗cyz
+</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/tensor.jl#L349-L374">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="LinearCombinations.coprod-Tuple{T} where T&lt;:AbstractTensor" href="#LinearCombinations.coprod-Tuple{T} where T&lt;:AbstractTensor"><code>LinearCombinations.coprod</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia hljs">coprod(t::T) where T &lt;: AbstractTensor -&gt; Linear{Tensor{Tuple{T,T}}}</code></pre><p>Return the coproduct of a tensor, computed from the coproducts of its components. Signs are introduced according to the usual sign rule. If all degrees are integers, then the coefficient type is <code>DefaultCoefftype</code>.</p><p>This function is linear.</p><p>See also: <a href="../extensions/#LinearCombinations.coprod"><code>coprod</code></a>, <a href="../extensions/#LinearCombinations.DefaultCoefftype"><code>LinearCombinations.DefaultCoefftype</code></a>.</p><p><strong>Example</strong></p><pre><code class="language-julia-repl hljs">julia&gt; import LinearCombinations: deg, coprod
+
+julia&gt; deg(x::String) = length(x);
+
+julia&gt; coprod(x::String) = Linear(Tensor(x[1:k], x[k+1:end]) =&gt; 1 for k in 1:length(x)-1);
+
+julia&gt; coprod(&quot;abc&quot;)
+a⊗bc+ab⊗c
+
+julia&gt; t = Tensor(&quot;abc&quot;, &quot;xyz&quot;)
+abc⊗xyz
+
+julia&gt; coprod(t)
+-(ab⊗x)⊗(c⊗yz)+(a⊗xy)⊗(bc⊗z)+(ab⊗xy)⊗(c⊗z)+(a⊗x)⊗(bc⊗yz)</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/tensor.jl#L388-L416">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="LinearCombinations.diff-Tuple{T} where T&lt;:AbstractTensor" href="#LinearCombinations.diff-Tuple{T} where T&lt;:AbstractTensor"><code>LinearCombinations.diff</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia hljs">diff(t::T) where T &lt;: AbstractTensor -&gt; Linear{T}</code></pre><p>Return the differential of the tensor <code>t</code> by differentiating each tensor factor at a time and adding signs according to the degrees of the components. The coefficient type is usually <code>DefaultCoefftype</code>. However, if the degrees of the tensor components are not integers, then the coefficient type is chosen such that it can accommodate the signs.</p><p>See also <a href="../extensions/#LinearCombinations.diff"><code>diff</code></a>, <a href="../extensions/#LinearCombinations.DefaultCoefftype"><code>LinearCombinations.DefaultCoefftype</code></a>.</p><p><strong>Example</strong></p><p>As usual, the degree of a string is its length.</p><pre><code class="language-julia-repl hljs">julia&gt; import LinearCombinations: deg, diff
+
+julia&gt; deg(x::String) = length(x);
+
+julia&gt; function diff(x::String)
+           if isempty(x) || x[1] == &#39;D&#39;
+               zero(Linear1{String,Int})
+           else
+               Linear1(&#39;D&#39;*x =&gt; 1)end
+       end;
+
+julia&gt; dx = diff(&quot;x&quot;)
+Dx
+
+julia&gt; diff(dx)
+0
+
+julia&gt; t = Tensor(&quot;a&quot;, &quot;bb&quot;, &quot;ccc&quot;)
+a⊗bb⊗ccc
+
+julia&gt; diff(t)
+Da⊗bb⊗ccc-a⊗Dbb⊗ccc-a⊗bb⊗Dccc</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/matthias314/LinearCombinations.jl/blob/cb1667389411b45aaff5edeb8d6bb62d0d2c23ea/src/tensor.jl#L768-L805">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../basis/">« Bases</a><a class="docs-footer-nextpage" href="../extensions/">Linear and multilinear functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Wednesday 6 March 2024 18:29">Wednesday 6 March 2024</span>. Using Julia version 1.10.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
