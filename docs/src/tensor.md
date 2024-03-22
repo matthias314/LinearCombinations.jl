@@ -39,6 +39,6 @@ AbstractTensor(::AbstractTensor)
 ```@docs
 deg(::AbstractTensor)
 *(::AbstractTensor,::AbstractTensor)
-coprod(::T) where T <: AbstractTensor
-LinearCombinations.diff(::T) where T <: AbstractTensor
+coprod(::AbstractTensor)
+LinearCombinations.diff(::AbstractTensor)
 ```
