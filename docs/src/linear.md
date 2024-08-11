@@ -103,7 +103,7 @@ Broadcasted `.*` is always interpreted as scalar multiplication, with the scalar
 The only exception is a statement of the form `a .*= c` (that is, `a .= a .* c`) where the scalar is
 the second argument.
 
-By default, only elements of types `AbstractLinear` and `Number` perticipate in broadcasting.
+By default, only elements of types `AbstractLinear` and `Number` participate in broadcasting.
 To allow other scalar or term types, one has to use the macro `@linear_broadcastable`.
 ```jldoctest
 julia> @linear_broadcastable Char
