@@ -14,25 +14,25 @@ using LinearCombinations: Sign, Zero, ONE, unval, DefaultCoefftype
     @test s0*s1 == s1*s0 == s1
     for x in (s0, s1, Int8(1), Int(2), Float32(0.25), BigInt(-1))
         @test s0*x === x*s0 === x
-	@test s1*x == x*s1 == -x
-	@test (s0 == x) == (x == s0) == isone(x)
-	@test (s1 == x) == (x == s1) == isone(-x)
+        @test s1*x == x*s1 == -x
+        @test (s0 == x) == (x == s0) == isone(x)
+        @test (s1 == x) == (x == s1) == isone(-x)
     end
     @test hash(s0) == hash(1)
     @test hash(s1) == hash(-1)
     @test hash(s0, UInt(7)) == hash(1, UInt(7))
     @test hash(s1, UInt(7)) == hash(-1, UInt(7))
-    
+
     for x in (Int16(1), 1, 1.0, BigFloat(1))
         @test convert(Sign, x) == s0
         @test convert(Sign, -x) == s1
-	@test_throws Exception convert(Sign, 2*x)
+        @test_throws Exception convert(Sign, 2*x)
     end
 
     for R in (Int32, Float16, BigInt)
         @test convert(R, s0) == one(R)
-        @test convert(R, s1) == -one(R)	
-	@test promote_type(Sign, R) === R
+        @test convert(R, s1) == -one(R)
+        @test promote_type(Sign, R) === R
     end
 end
 
@@ -44,12 +44,12 @@ end
     for x in (z, Int8(-4), 10, 3.5, BigInt(2))
         @test z+x === x+z === x-z === x
         @test z-x == -x
-	@test z*x === x*z === z
+        @test z*x === x*z === z
     end
-    
+
     for R in (Int32, Float16, BigInt)
         @test convert(R, z) == zero(R)
-	@test promote_type(Zero, R) === R
+        @test promote_type(Zero, R) === R
     end
 end
 
@@ -57,11 +57,11 @@ end
     a = Linear('x' => 1, 'y' => -2, 'z' => 0)
     b = Linear('x' => 1.0, 'y' => -2.0, 'z' => 0.0)
     c = Linear("x" => 1.0, "y" => -2.0, "z" => 0.0)
-    
+
     @test @inferred(termtype(a)) == Char
     @test @inferred(coefftype(b)) == Float64
     @test @inferred(eltype(c)) == Pair{String,Float64}
-    
+
     @test @inferred(length(a)) == 2
     @test @inferred(a['x']) == 1
     @test @inferred(a['w']) == 0
@@ -69,24 +69,24 @@ end
     @test c["x"] == 3.5
     @test !iszero(a)
     @test a == b != c
-    
+
     aa = @inferred copy(a)
     @test aa == a && aa !== a
     @test typeof(aa) == typeof(a)
-    
-    @test @inferred(hash(a)) isa UInt    
+
+    @test @inferred(hash(a)) isa UInt
     @test hash(a) == hash(aa) == hash(b) != hash(c)
-    
+
     @test @inferred(Set(coeffs(b))) == Set([1.0, -2.0])
-    
+
     @test iszero(@inferred(zero(a)))
     @test iszero(@inferred(zero(typeof(a))))
-    
+
     @test sizehint!(a, 2*length(a)) == a
-    
+
     aa = copy(a)
     @test iszero(@inferred(zero!(aa)))
-    
+
     a = Linear('a'+k => k for k in 1:8)
     @test a == Linear(a)
     @test a == Linear(x => c for (x, c) in a)
@@ -99,7 +99,7 @@ end
     @test @inferred(addmul(a, 'w', 2)) == a + Linear('w' => 2)
     @test @inferred(addmul(a, 'w', -1)) == a - 'w'
     @test @inferred(addmul(a, 'w', -2)) == a - Linear('w' => 2)
-    
+
     aa = copy(a)
     @test @inferred(addmul!(aa, 'w', 0)) === aa
     @test aa == a
@@ -124,7 +124,7 @@ end
     @test @inferred(addmul(a, b, 2)) == a + 2*b
     @test @inferred(addmul(a, b, -1)) == a - b
     @test @inferred(addmul(a, b, -2)) == a - 2*b
-    
+
     aa = copy(a)
     @test @inferred(addmul!(aa, b, 0)) === aa == a
     aa = copy(a)
@@ -135,7 +135,7 @@ end
     @test @inferred(addmul!(aa, b, -1)) === aa == a - b
     aa = copy(a)
     @test @inferred(addmul!(aa, b, -2)) === aa == a - 2*b
-    
+
     aa = copy(a)
     @test @inferred(add!(aa, b)) === aa == a + b
     aa = copy(a)
@@ -146,7 +146,7 @@ end
     a = Linear('a'+k => k for k in 1:8)
     @test @inferred convert(typeof(a), a) === a
     @test @inferred convert(Linear{Char,Float64}, 'x') == Linear('x' => 1.0)
-    
+
     a = Linear(Int8(k) => k for k in 1:8)
     @test @inferred convert(Linear{BigInt,Float64}, a) == Linear(BigInt(k) => Float64(k) for k in 1:8)
     @test @inferred convert(Linear{Int8,Float64}, a) == Linear(Int8(k) => Float64(k) for k in 1:8)
@@ -174,7 +174,7 @@ end
         c = @inferred(-a)
         @test typeof(c) == typeof(a)
     end
-    
+
     for R in (Int8, Int, BigInt, Float64, BigFloat), op in (+, -)
         y = 'y'
         a = Linear{Char,R}('x' => 2, y => -1, 'z' => 1)
@@ -198,7 +198,7 @@ end
         @inferred a*S(c)
         @test b == c*a == a*S(c)
         @test promote_type(typeof(a), S) == typeof(b)
-        
+
         @test iszero(zero(S)*a)
     end
 end
@@ -212,15 +212,15 @@ end
         @test ab == c
         @test coefftype(ab) == promote_type(R, S)
     end
-    
-    for R in (Int, BigFloat)  
+
+    for R in (Int, BigFloat)
         a = Linear{String,R}("x" => 2, "y" => -1)
         c = @inferred(a^8)
         @test typeof(c) == typeof(a)
         b = a*a
         b = b*b
         @test c == b*b
-    end    
+    end
 end
 
 @testset "broadcasting" begin
@@ -288,8 +288,8 @@ end
         d = zero(Linear{String,BigInt})
         c = @inferred f(a; addto = d)
         @test c === d == b
-	
-	b = 2 * Linear('X' => 1, 'Y' => 2, 'Z' => 3)
+
+        b = 2 * Linear('X' => 1, 'Y' => 2, 'Z' => 3)
         S = promote_type(R, Float64)
         c = @inferred g(a)
         @test typeof(c) == Linear{Char,S}
@@ -322,9 +322,9 @@ end
         d = zero(Linear{String,BigInt})
         c = @inferred h(a; addto = d)
         @test c === d == b
-	
-	b = 2 * Linear('X' => 1, 'Y' => 2, 'Z' => 3)
-	S = promote_type(R, Float64)
+
+        b = 2 * Linear('X' => 1, 'Y' => 2, 'Z' => 3)
+        S = promote_type(R, Float64)
         c = @inferred j(a)
         @test typeof(c) == Linear{Char,S}
         @test c == b
@@ -350,7 +350,7 @@ end
     @test t == @inferred Tensor(tt...)
     @test @inferred(Tuple(t)) == tt
     @test Tuple(x for x in t) == tt
-    
+
 
     @test @inferred(hash(t)) isa UInt
     t2 = Tensor('x', "y", [1,2])
@@ -368,9 +368,9 @@ end
     a = @inferred tensor(tt...; addto = b, coeff = -2)
     @test a === b == Linear(t => -2.0)
     @test iszero(tensor(tt...; addto = a, coeff = 2))
-    
+
     @test @inferred(tensor(; coeff = ONE)) isa Linear{Tensor{Tuple{}},DefaultCoefftype}
-    
+
     for R in (Int8, Int, BigInt, Float64, BigFloat), S in (Int8, Int, BigInt, Float64, BigFloat)
         a = Linear{Char,R}('x' => 1, 'y' => -2)
         b = Linear{String,S}("u" => -1, "v" => 3)
@@ -379,20 +379,20 @@ end
         @test coefftype(c) == promote_type(R, S)
         @test c == Linear(Tensor('x', "u") => -1, Tensor('x', "v") => 3,
             Tensor('y', "u") => 2, Tensor('y', "v") => -6)
-    
+
         c = zero(Linear{Tensor{Tuple{Char,String}},Int32})
         @inferred tensor(a, b; addto = c)
         cc = copy(c)
         @test tensor(a, b; addto = cc, coeff = -3) == -2*c
     end
-    
+
     for n in 1:8
         a = @inferred tensor(['a'+k for k in 1:n]...)
         @test a isa Linear{Tensor{NTuple{n,Char}},DefaultCoefftype}
         a = @inferred tensor([Linear('a'+k => 2.0) for k in 1:n]...)
         @test a isa Linear{Tensor{NTuple{n,Char}},Float64}
     end
-    
+
     for t in (Tensor(), Tensor('x'), Tensor('x', 'y', 'z'))
         @test @inferred(deg(t)) === Zero()
     end
@@ -408,21 +408,21 @@ end
 import LinearCombinations: deg
 deg(x::String) = length(x)
 
-@testset "Tensor deg String" begin    
+@testset "Tensor deg String" begin
     for k1 in 1:3, k3 in 1:3
         t = Tensor("x"^k1, 'y', "z"^k3)
-	@test @inferred(deg(t)) == k1+k3
+        @test @inferred(deg(t)) == k1+k3
     end
 end
 
 deg(x::Char) = BigInt(1)
 
-@testset "Tensor deg Char String" begin    
+@testset "Tensor deg Char String" begin
     for k1 in 1:3, k2 in 1:3, k3 in 1:3
         t = Tensor("x"^k1, 'y', "z"^k3)
-	@test @inferred(deg(t)) == k1+1+k3
+        @test @inferred(deg(t)) == k1+1+k3
         t = Tensor("x"^k1, "y"^k2, "z"^k3)
-	@test @inferred(deg(t)) == k1+k2+k3
+        @test @inferred(deg(t)) == k1+k2+k3
     end
 end
 
@@ -450,20 +450,20 @@ end
     @test rg_inv(rg(t)) == a
     @inferred rg(a)
     @test @inferred(deg(rg)) === Zero()
-    
+
     @test rg_inv(rg(a)) == a
     @test rg(rg(rg(t))) == a
     @test rg(rg(rg(a))) == a
-    
+
     a = tensor('x', "y")
     @inferred swap(a)
     @test swap(swap(a)) == a
-       
+
     rg = regroup(:(), :())
     b = tensor()
     @inferred rg(b)
     @test rg(b) == b
-    
+
     rg, rg_inv = regroup_inv(:((1,)), :(((1,),)))
     b = tensor('x')
     @test rg(b) == tensor(b)
@@ -474,11 +474,11 @@ end
     a = @inferred tensor('x', "y"; coefftype = Val(Int))
     b = @inferred swap(a; coeff = 2)
     @test b == 2*swap(a)
-    
+
     b = zero(Linear{Tensor{Tuple{String,Char}},Int})
     @test b === swap(a; addto = b)
     @test b == swap(a)
-    
+
     t = Tensor('x',"y")
     b = zero(Linear1{Tensor{Tuple{String,Char}},Float64})
     swap(t; addto = b)
@@ -487,12 +487,12 @@ end
     @test typeof(b) == typeof(c)
 end
 
-@testset "regroup tensor sign" begin 
+@testset "regroup tensor sign" begin
     @test swap(tensor("x", "y")) == -tensor("y", "x")
     @test swap(tensor("x", "yy")) == tensor("yy", "x")
     @test swap(tensor("xx", "y")) == tensor("y", "xx")
     @test swap(tensor("xx", "yy")) == tensor("yy", "xx")
-    
+
     rg = regroup(:(1,2,3), :(3,2,1))
     @test rg(tensor("x", "y", "z")) == -tensor("z", "y", "x")
     @test rg(tensor("x", "yy", "z")) == -tensor("z", "yy", "x")
@@ -510,7 +510,7 @@ const tensormap = Tensor
     a = @inferred tensor(; coefftype = Val(Int32))
     @test h(t) == Linear(t => 1)
     @test h(a; coeff = 3) == 3*a
-    
+
     h = tensormap(f0, f0)
     @test @inferred(deg(h)) === Zero()
     for k1 in 1:3, k2 in 1:3
@@ -536,7 +536,7 @@ const tensormap = Tensor
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^0 * 2)
         @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Float64}
-	
+
         a = tensor(x, y)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^0 * 2)
@@ -552,7 +552,7 @@ const tensormap = Tensor
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^0 * 2)
         @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Float64}
-	
+
         a = Tensor(x, y)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^0 * 2)
@@ -568,7 +568,7 @@ const tensormap = Tensor
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^0 * 4)
         @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Float64}
-	
+
         a = Tensor(x, y)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^0 * 4)
@@ -585,7 +585,7 @@ const tensormap = Tensor
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^0)
         @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Int}
-	
+
         a = Tensor(x, y, z)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^0)
@@ -603,7 +603,7 @@ const tensormap = Tensor
         b = @inferred(h(t; coeff = c))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^0 * 2 * c)
         @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Float64}
-	
+
         a = Tensor(x, y, z)
         b = @inferred(h(a; coeff = c))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^0 * 2 * c)
@@ -648,7 +648,7 @@ deg(::typeof(g1)) = 1
     a = @inferred tensor(; coefftype = Val(Int32))
     @test h(t) == Linear(t => 1)
     @test h(a; coeff = 3) == 3*a
-    
+
     h = tensormap(f1, f1)
     @test @inferred(deg(h)) == deg(f1)+deg(f1)
     for k1 in 1:3, k2 in 1:3
@@ -674,7 +674,7 @@ deg(::typeof(g1)) = 1
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^0 * 2)
         @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Float64}
-	
+
         a = tensor(x, y)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^0 * 2)
@@ -690,7 +690,7 @@ deg(::typeof(g1)) = 1
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^k1 * 2)
         @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Float64}
-	
+
         a = Tensor(x, y)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^k1 * 2)
@@ -706,7 +706,7 @@ deg(::typeof(g1)) = 1
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^0 * 4)
         @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Float64}
-	
+
         a = Tensor(x, y)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^0 * 4)
@@ -723,7 +723,7 @@ deg(::typeof(g1)) = 1
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^k2)
         @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Int}
-	
+
         a = Tensor(x, y, z)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^k2)
@@ -741,7 +741,7 @@ deg(::typeof(g1)) = 1
         b = @inferred(h(t; coeff = c))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^k1 * 2 * c)
         @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Float64}
-	
+
         a = Tensor(x, y, z)
         b = @inferred(h(a; coeff = c))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^k1 * 2 * c)
@@ -780,7 +780,7 @@ end
     a = @inferred tensor(; coefftype = Val(Int32))
     @test h(t) == Linear(t => 1)
     @test h(a; coeff = 3) == 3*a
-    
+
     h = tensormap(f1, f1)
     @test @inferred(deg(h)) == deg(f1)+deg(f1)
     for k1 in 1:3, k2 in 1:3
@@ -806,7 +806,7 @@ end
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^k1 * 2)
         @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Float64}
-	
+
         a = tensor(x, y)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^k1 * 2)
@@ -822,7 +822,7 @@ end
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^k1 * 2)
         @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Float64}
-	
+
         a = Tensor(x, y)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^k1 * 2)
@@ -838,7 +838,7 @@ end
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^k1 * 4)
         @test typeof(b) == Linear{Tensor{NTuple{2, String}}, Float64}
-	
+
         a = Tensor(x, y)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2) => (-1)^k1 * 4)
@@ -855,7 +855,7 @@ end
         b = @inferred(h(t))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^k2)
         @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Int}
-	
+
         a = Tensor(x, y, z)
         b = @inferred(h(a))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^k2)
@@ -873,7 +873,7 @@ end
         b = @inferred(h(t; coeff = c))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^k2 * 2 * c)
         @test typeof(b) == Linear{Tensor{NTuple{3, String}}, Float64}
-	
+
         a = Tensor(x, y, z)
         b = @inferred(h(a; coeff = c))
         @test b == Linear(Tensor("X"^k1, "Y"^k2, "Z"^k3) => (-1)^k2 * 2 * c)
@@ -917,48 +917,48 @@ Base.hash(p::P, h::UInt) = hash(p.s, h)
 
 @testset "lin ext eval" begin
     for R in (Int8, BigInt, BigFloat), S in (Int8, Int32, Float64)
-	x, y, u, v = "x", "y", "u", "v"
+        x, y, u, v = "x", "y", "u", "v"
         a = Linear{P,R}(P(x) => 1, P(y) => 2)
         b = Linear{String,S}(u => -1, v => 3)
-	
-	au = @inferred a(u)
+
+        au = @inferred a(u)
         @test au isa Linear{String,R}
         @test au == Linear("xu" => 1, "yu" => 2)
-	
-	au = @inferred a(u; coeff = 3.0)
+
+        au = @inferred a(u; coeff = 3.0)
         @test au isa Linear{String,R}
         @test au == 3*Linear("xu" => 1, "yu" => 2)
-	
-	c = zero(Linear{String,R})
-	au = @inferred a(u; addto = c, coeff = 3.0)
-	@test au === c == 3*Linear("xu" => 1, "yu" => 2)
-	
+
+        c = zero(Linear{String,R})
+        au = @inferred a(u; addto = c, coeff = 3.0)
+        @test au === c == 3*Linear("xu" => 1, "yu" => 2)
+
         ab = @inferred a(b)
         @test ab isa Linear{String,promote_type(R,S)}
         @test ab == Linear("xu" => -1, "xv" => 3, "yu" => -2, "yv" => 6)
-	
+
         ab = @inferred a(b; coeff = 5)
         @test ab isa Linear{String,promote_type(R,S)}
         @test ab == 5*Linear("xu" => -1, "xv" => 3, "yu" => -2, "yv" => 6)
-	
-	c = copy(ab)
+
+        c = copy(ab)
         ab = @inferred a(b; addto = c, coeff = 5)
         @test ab === c == 2*5*Linear("xu" => -1, "xv" => 3, "yu" => -2, "yv" => 6)
-	
-	a = Linear(P(x) => R(2))
-	b = Linear(u => S(3))
-	c = Linear(v => Int64(-1))
-	auv = @inferred a(u, v)
-	@test typeof(auv) == Linear{String,promote_type(Int16,R)}
-	@test auv == Linear("xuv" => 5*2)
+
+        a = Linear(P(x) => R(2))
+        b = Linear(u => S(3))
+        c = Linear(v => Int64(-1))
+        auv = @inferred a(u, v)
+        @test typeof(auv) == Linear{String,promote_type(Int16,R)}
+        @test auv == Linear("xuv" => 5*2)
 
         abv = @inferred a(b, v)
-	@test typeof(abv) == Linear{String,promote_type(Int16,R,S)}
-	@test abv == Linear("xuv" => 5*2*3)
+        @test typeof(abv) == Linear{String,promote_type(Int16,R,S)}
+        @test abv == Linear("xuv" => 5*2*3)
 
         abc = @inferred a(b, c)
-	@test typeof(abc) == Linear{String,promote_type(Int64,R,S)}
-	@test abc == Linear("xuv" => -5*2*3)
+        @test typeof(abc) == Linear{String,promote_type(Int64,R,S)}
+        @test abc == Linear("xuv" => -5*2*3)
     end
 end
 
@@ -968,7 +968,7 @@ function diff(x::String;
         coefftype = Int,
         addto = zero(Linear{String,unval(coefftype)}),
         coeff = 1,
-        is_filtered = false) 
+        is_filtered = false)
     if x[1] != 'd'
         addmul!(addto, 'd' * x, coeff)
     end
@@ -996,7 +996,7 @@ end
     a = Linear("x" => 2, "xx" => -1)
     b = Linear("yy" => 1, "yyy" => -3)
     c = Linear("z" => 5, "zzz" => -4)
-    
+
     x = @inferred tensor(a, b, c; coefftype = Val(Float64))
     dx = @inferred diff(x)
     ddx = @inferred diff(dx)
@@ -1006,7 +1006,7 @@ end
     dx = @inferred diff(x; coeff = -2)
     @test dx isa Linear{Tensor{NTuple{3,String}},Float64}
     @test dx == -2*diff(x)
-    
+
     for n in 0:8
         a = @inferred tensor((string(x) for x in 'a':'a'+n-1)...; coefftype = Val(Int))
         b = @inferred diff(a)

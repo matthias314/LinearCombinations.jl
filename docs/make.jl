@@ -20,7 +20,7 @@ DocMeta.setdocmeta!(LinearCombinations, :DocTestSetup, doctestsetup; recursive =
 makedocs(sitename = "LinearCombinations.jl",
     modules = [LinearCombinations],
     pages = [
-    	"index.md",
+        "index.md",
         "linear.md",
         "basis.md",
         "tensor.md",
