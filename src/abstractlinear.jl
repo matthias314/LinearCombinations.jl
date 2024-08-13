@@ -344,33 +344,82 @@ julia> a + 'X'
 """
 termcoeff(xc::Pair) = xc
 
-repr_coeff(c) = repr(c)
-repr_coeff(a::AbstractLinear) = length(a) == 1 ? repr(a) : string('(', repr(a), ')')
+const LINEAR_SHOW_MAX = 10
 
-show_summand(io::IO, x, cs) = print(io, cs, '*', x)
+show_extra_params(io::IO, a::AbstractLinear) = nothing
 
-function show(io::IO, a::AbstractLinear{T,R}) where {T,R}
+function show(io::IO, a::L) where L <: AbstractLinear
+    print(io, typename(L))
+    if get(io, :typeinfo, Any) != L || iszero(a)
+        print(io, '{', termtype(L), ", ", coefftype(L), '}')
+    end
+    print(io, '(')
+    if get(io, :limit, false) && length(a) > LINEAR_SHOW_MAX
+        join(io, Iterators.take(a, LINEAR_SHOW_MAX), ", ")
+        print(io, " …")
+    else
+        join(io, a, ", ")
+    end
+    show_extra_params(io, a)
+    print(io, ')')
+end
+
+show_term(io::IO, x) = show(io, MIME"text/plain"(), x)
+show_term(io::IO, x::Union{AbstractArray,AbstractDict}) = show(io, x)
+
+show_needsplus(c) = true
+show_needsplus(c::Real) = !signbit(c)
+show_needsplus(a::AbstractLinear) = length(a) != 1 || show_needsplus(first(coeffs(a)))
+
+show_needsparen(c) = false
+show_needsparen(c::Complex) = true
+show_needsparen(c::Complex{Bool}) = false
+show_needsparen(a::AbstractLinear) = length(a) > 1
+
+function show_coeff(io::IO, c)
+    show_needsparen(c) && print(io, '(')
+    show(io, MIME"text/plain"(), c)
+    show_needsparen(c) && print(io, ')')
+end
+
+function show_summand(io::IO, x, c)
+    show_coeff(io, c)
+    print(io, '*')
+    show_term(io, x)
+end
+
+function show_summands(io, a)
+    io = IOContext(io, :compact => true)
+    isfirst = true
+    for (x, c) in a
+        if isone(c)
+            isfirst || print(io, '+')
+            show_term(io, x)
+        elseif c == -1
+            print(io, '-')
+            show_term(io, x)
+        else
+            isfirst || !show_needsplus(c) || print(io, '+')
+            show_summand(io, x, c)
+        end
+        isfirst = false
+    end
+end
+
+function show(io::IO, ::MIME"text/plain", a::L) where L <: AbstractLinear
+    if !get(io, :compact, false)
+        print(io, typename(L), '{', termtype(L), ", ", coefftype(L), "} with ", length(a), " term")
+        length(a) != 1 && print(io, 's')
+        println(io, ':')
+    end
     if iszero(a)
         # print(io, zero(R))
         print(io, '0')
+    elseif get(io, :limit, false) && length(a) > 2*LINEAR_SHOW_MAX
+        show_summands(io, Iterators.take(a, 2*LINEAR_SHOW_MAX))
+        print(io, "±⋯")
     else
-        isfirst = true
-        for (x, c) in a
-            if isone(c)
-                if isfirst
-                    print(io, x)
-                else
-                    print(io, '+', x)
-                end
-            elseif isone(-c)
-                print(io, '-', x)
-            else
-                cs = repr_coeff(c)
-                isfirst || first(cs) in "+-±" || print(io, '+')
-                show_summand(io, x, cs)
-            end
-            isfirst = false
-        end
+        show_summands(io, a)
     end
 end
 

@@ -53,6 +53,8 @@ mutable struct Linear1{T,R} <: AbstractLinear{T,R}
     Linear1{T,R}() where {T,R} = new{T,R}(true)
 end
 
+typename(::Type{<:Linear1}) = :Linear1
+
 change_coefftype(::Type{Linear1{T,R}}, ::Type{S}) where {T,R,S} = Linear1{T,S}
 
 function Base.:(==)(a::Linear1, b::Linear1)
