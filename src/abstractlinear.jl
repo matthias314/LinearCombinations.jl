@@ -344,34 +344,63 @@ julia> a + 'X'
 """
 termcoeff(xc::Pair) = xc
 
-repr_coeff(c) = repr(c)
-repr_coeff(a::AbstractLinear) = length(a) == 1 ? repr(a) : string('(', repr(a), ')')
+const LINEAR_SHOW_MAX = 10
 
-show_summand(io::IO, x, cs) = print(io, cs, '*', x)
+show_extra_params(io::IO, a::AbstractLinear) = nothing
 
-function show(io::IO, a::AbstractLinear{T,R}) where {T,R}
+function Base.show(io::IO, a::L) where L <: AbstractLinear
+    print(io, typename(L))
+    if get(io, :typeinfo, Any) != L || iszero(a)
+        print(io, '{', termtype(L), ", ", coefftype(L), '}')
+    end
+    print(io, '(')
+    if get(io, :limit, false) && length(a) > LINEAR_SHOW_MAX
+        join(io, Iterators.take(a, LINEAR_SHOW_MAX), ", ")
+        print(io, " …")
+    else
+        join(io, a, ", ")
+    end
+    show_extra_params(io, a)
+    print(io, ')')
+end
+
+function show_summand(io::IO, x, cs)
+    print(io, cs, '*')
+    show(io, MIME"text/plain"(), x)
+end
+
+function show_summands(io, a)
+    io = IOContext(io, :compact => true, :inproduct => true)
+    isfirst = true
+    for (x, c) in a
+        if isone(c)
+            isfirst || print(io, '+')
+            show(io, MIME"text/plain"(), x)
+        elseif c == -1
+            print(io, '-')
+            show(io, MIME"text/plain"(), x)
+        else
+            cs = repr(MIME"text/plain"(), c; context = io)
+            isfirst || first(cs) in "+-±" || print(io, '+')
+            show_summand(io, x, cs)
+        end
+        isfirst = false
+    end
+end
+
+function show(io::IO, ::MIME"text/plain", a::AbstractLinear{T,R}) where {T,R}
+    get(io, :inproduct, false) && length(a) > 1 && print(io, '(')
     if iszero(a)
         # print(io, zero(R))
         print(io, '0')
+    elseif get(io, :limit, false) && length(a) > 2*LINEAR_SHOW_MAX
+        show_summands(io, Iterators.take(a, 2*LINEAR_SHOW_MAX))
+        print(io, "±⋯")
     else
-        isfirst = true
-        for (x, c) in a
-            if isone(c)
-                if isfirst
-                    print(io, x)
-                else
-                    print(io, '+', x)
-                end
-            elseif isone(-c)
-                print(io, '-', x)
-            else
-                cs = repr_coeff(c)
-                isfirst || first(cs) in "+-±" || print(io, '+')
-                show_summand(io, x, cs)
-            end
-            isfirst = false
-        end
+        show_summands(io, a)
     end
+    get(io, :inproduct, false) && length(a) > 1 && print(io, ')')
+    nothing
 end
 
 """

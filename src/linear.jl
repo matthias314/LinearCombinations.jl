@@ -25,6 +25,8 @@ struct Linear{T,R} <: AbstractLinear{T,R}
     Linear{T,R}(ht::Dict{Hashed{T},R}) where {T,R} = new{T,R}(ht)
 end
 
+typename(::Type{<:Linear}) = :Linear
+
 change_coefftype(::Type{Linear{T,R}}, ::Type{S}) where {T,R,S} = Linear{T,S}
 
 Base.:(==)(a::Linear, b::Linear) = a.ht == b.ht

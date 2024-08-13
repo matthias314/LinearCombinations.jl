@@ -270,6 +270,10 @@ end
 
 change_coefftype(::Type{DenseLinear{T,R,B,V}}, ::Type{S}) where {T,R,B,V,S} = DenseLinear{T,S,B,V}
 
+typename(::Type{<:DenseLinear}) = :DenseLinear
+
+show_extra_params(io::IO, a::DenseLinear) = print(io, "; basis = ", a.b)
+
 function Base.:(==)(a::DenseLinear, b::DenseLinear)
     if a.b === b.b
         a.v == b.v
