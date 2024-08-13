@@ -61,11 +61,17 @@ iterate(t::AbstractTensor, state...) = iterate(Tuple(t), state...)
 
 @propagate_inbounds getindex(t::AbstractTensor, k) = Tuple(t)[k]
 
-function show(io::IO, t::AbstractTensor)
+function show(io::IO, ::MIME"text/plain", t::AbstractTensor)
     if isempty(t)
         print(io, "()")
     else
-        join(io, (x isa AbstractTensor && !isempty(x) ? "($x)" : x for x in t), '⊗')
+        get(io, :intensor, false) && print(io, '(')
+        for (i, x) in enumerate(t)
+            i == 1 || print(io, '⊗')
+            show_term(IOContext(io, :compact => true, :intensor => true), x)
+        end
+        get(io, :intensor, false) && print(io, ')')
+        nothing
     end
 end
 
@@ -189,6 +195,21 @@ struct Tensor{T<:Tuple} <: AbstractTensor{T}
 end
 
 Base.Tuple(t::Tensor) = t.a
+
+function show(io::IO, t::Tensor{T}) where T <: Tuple
+    print(io, :Tensor)
+    typeof(Tuple(t)) == T || print(io, '{', T, '}')
+    print(io, '(')
+    if T <: Tuple{Tuple}
+        print(io, Tuple(t))
+    else
+        for (i, x) in enumerate(t)
+            i == 1 || print(io, ", ")
+            show(io, x)
+        end
+    end
+    print(io, ')')
+end
 
 Tensor_func(x...) = Tensor(x)
 keeps_filtered(::typeof(Tensor_func), types...) = true
