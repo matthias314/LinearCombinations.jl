@@ -92,7 +92,7 @@ julia> length(Basis(Char[]))
 """
 Basis(iter) = Basis(collect(iter))
 
-show(io::IO, b::Basis) = print(io, "Basis(", repr(b.list), ')')
+show(io::IO, b::Basis) = print(io, "Basis(", b.list, ')')
 
 axes(b::Basis) = axes(b.list)
 
@@ -164,7 +164,7 @@ end
 
 function show(io::IO, b::TensorBasis)
     print(io, "TensorBasis(")
-    join(io, (repr(basis) for basis in b.bases), ", ")
+    join(io, b.bases, ", ")
     print(io, ')')
 end
 
