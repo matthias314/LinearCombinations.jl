@@ -492,7 +492,7 @@ end
 
 @struct_equal_hash TensorSlurp
 
-show(io::IO, g::TensorSlurp) = print(io, "TensorSlurp($(repr(g.f)))")
+show(io::IO, g::TensorSlurp) = (print(io, "TensorSlurp("); show(io, g.f); print(io, ')'))
 
 # @multilinear g::TensorSlurp (x...; kw...) -> g.f(Tensor(x); kw...)
 @multilinear g::TensorSlurp TermComposedFunction(g.f, Tensor_func)
@@ -552,7 +552,7 @@ end
 
 @struct_equal_hash TensorSplat
 
-show(io::IO, g::TensorSplat) = print(io, "TensorSplat($(repr(g.f)))")
+show(io::IO, g::TensorSplat) = (print(io, "TensorSplat("); show(io, g.f); print(io, ')'))
 
 (g::TensorSplat)(x::AbstractTensor; kw...) = g.f(Tuple(x)...; kw...)
 
