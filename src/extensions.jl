@@ -375,11 +375,7 @@ LinearExtension(f::F, name = "LinearExtension($(repr(f)))") where F = LinearExte
 
 keeps_filtered(g::LinearExtension, T::Type) = keeps_filtered(g.f, T)
 
-# function show(io::IO, ::MIME"text/plain", g::LinearExtension)
-function show(io::IO, g::LinearExtension)
-    print(io, g.name)
-    # show(io, MIME("text/plain"), g.f)
-end
+show(io::IO, g::LinearExtension) = print(io, g.name)
 
 @propagate_inbounds (g::LinearExtension)(x; kw...) = g.f(x; kw...)
 
