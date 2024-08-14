@@ -227,6 +227,8 @@ Hashed{T}(x) where T = Hashed{T}(x, hash(x))
 Hashed{T}(x::Hashed{T}) where T = x
 Hashed{T}(x::Hashed) where T = Hashed{T}(x.var, x.hash)
 
+show(io::IO, ::MIME"text/plain", x::Hashed) = show(io, MIME"text/plain"(), x.var)
+
 convert(::Type{Hashed{T}}, x::Hashed) where T = Hashed{T}(x)
 
 ==(x::Hashed, y::Hashed) = x.var == y.var
@@ -246,8 +248,6 @@ unhash(x::Hashed) = x.var
 
 unhash_type(::Type{T}) where T = T
 unhash_type(::Type{Hashed{T}}) where T = T
-
-show(io::IO, x::Hashed) = print(io, x.var)
 
 #
 # degree
