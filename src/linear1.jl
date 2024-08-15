@@ -122,7 +122,7 @@ function modifycoeff!(op::AddSub, a::Linear1{T,R}, x, c) where {T,R}
 end
 
 function -(a::Linear1{T,R}) where {T,R}
-    if has_char(2) || iszero(a)
+    if has_char2(R) || iszero(a)
         a
     else
         Linear1{T,R}(a.x => -a.c)
