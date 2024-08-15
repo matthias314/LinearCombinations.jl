@@ -365,15 +365,31 @@ function Base.show(io::IO, a::L) where L <: AbstractLinear
 end
 
 show_term(io::IO, x) = show(io, MIME"text/plain"(), x)
-show_term(io::IO, x::Union{AbstractArray,AbstractDict) = show(io, x)
+show_term(io::IO, x::Union{AbstractArray,AbstractDict}) = show(io, x)
 
-function show_summand(io::IO, x, cs)
-    print(io, cs, '*')
+show_needsplus(c) = true
+show_needsplus(c::Real) = !signbit(c)
+show_needsplus(a::AbstractLinear) = length(a) != 1 || show_needsplus(first(coeffs(a)))
+
+show_needsparen(c) = false
+show_needsparen(c::Complex) = true
+show_needsparen(c::Complex{Bool}) = false
+show_needsparen(a::AbstractLinear) = length(a) > 1
+
+function show_coeff(io::IO, c)
+    show_needsparen(c) && print(io, '(')
+    show(io, MIME"text/plain"(), c)
+    show_needsparen(c) && print(io, ')')
+end
+
+function show_summand(io::IO, x, c)
+    show_coeff(io, c)
+    print(io, '*')
     show_term(io, x)
 end
 
 function show_summands(io, a)
-    io = IOContext(io, :compact => true, :inproduct => true)
+    io = IOContext(io, :compact => true)
     isfirst = true
     for (x, c) in a
         if isone(c)
@@ -383,16 +399,14 @@ function show_summands(io, a)
             print(io, '-')
             show_term(io, x)
         else
-            cs = repr(MIME"text/plain"(), c; context = io)
-            isfirst || first(cs) in "+-±" || print(io, '+')
-            show_summand(io, x, cs)
+            isfirst || !show_needsplus(c) || print(io, '+')
+            show_summand(io, x, c)
         end
         isfirst = false
     end
 end
 
 function show(io::IO, ::MIME"text/plain", a::AbstractLinear{T,R}) where {T,R}
-    get(io, :inproduct, false) && length(a) > 1 && print(io, '(')
     if iszero(a)
         # print(io, zero(R))
         print(io, '0')
@@ -402,8 +416,6 @@ function show(io::IO, ::MIME"text/plain", a::AbstractLinear{T,R}) where {T,R}
     else
         show_summands(io, a)
     end
-    get(io, :inproduct, false) && length(a) > 1 && print(io, ')')
-    nothing
 end
 
 """
