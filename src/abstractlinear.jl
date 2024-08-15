@@ -364,9 +364,12 @@ function Base.show(io::IO, a::L) where L <: AbstractLinear
     print(io, ')')
 end
 
+show_term(io::IO, x) = show(io, MIME"text/plain"(), x)
+show_term(io::IO, x::Union{AbstractArray,AbstractDict) = show(io, x)
+
 function show_summand(io::IO, x, cs)
     print(io, cs, '*')
-    show(io, MIME"text/plain"(), x)
+    show_term(io, x)
 end
 
 function show_summands(io, a)
@@ -375,10 +378,10 @@ function show_summands(io, a)
     for (x, c) in a
         if isone(c)
             isfirst || print(io, '+')
-            show(io, MIME"text/plain"(), x)
+            show_term(io, x)
         elseif c == -1
             print(io, '-')
-            show(io, MIME"text/plain"(), x)
+            show_term(io, x)
         else
             cs = repr(MIME"text/plain"(), c; context = io)
             isfirst || first(cs) in "+-±" || print(io, '+')
