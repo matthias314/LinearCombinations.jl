@@ -348,7 +348,7 @@ const LINEAR_SHOW_MAX = 10
 
 show_extra_params(io::IO, a::AbstractLinear) = nothing
 
-function Base.show(io::IO, a::L) where L <: AbstractLinear
+function show(io::IO, a::L) where L <: AbstractLinear
     print(io, typename(L))
     if get(io, :typeinfo, Any) != L || iszero(a)
         print(io, '{', termtype(L), ", ", coefftype(L), '}')
@@ -406,7 +406,12 @@ function show_summands(io, a)
     end
 end
 
-function show(io::IO, ::MIME"text/plain", a::AbstractLinear{T,R}) where {T,R}
+function show(io::IO, ::MIME"text/plain", a::L) where L <: AbstractLinear
+    if !get(io, :compact, false)
+        print(io, typename(L), '{', termtype(L), ", ", coefftype(L), "} with ", length(a), " term")
+        length(a) != 1 && print(io, 's')
+        println(io, ':')
+    end
     if iszero(a)
         # print(io, zero(R))
         print(io, '0')
