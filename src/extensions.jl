@@ -94,7 +94,8 @@ function addtraits!(ex, def::Dict, traits)
     def[:name] = :($(@__MODULE__).hastrait)
     tunion = Expr(:curly, :Union, (Expr(:curly, :Val, QuoteNode(t)) for t in traits)...)
     def[:args][2] = Expr(:(::), tunion)
-    push!(ex.args, combinedef(def))
+    push!(ex.args, esc(combinedef(def)))
+    ex
 end
 
 """
@@ -165,13 +166,7 @@ macro linear_kw(ex)
 
     def = splitdef(ex1)
     f = def[:name]
-    if isexpr(f, :(::))
-        FT = f.args[2]
-        traitex = Expr(:block)
-    else
-        FT = :(typeof($f))
-        traitex = Expr(:block, :(function $f end))
-    end
+    FT = isexpr(f, :(::)) ? f.args[2] : :(typeof($f))
     kwnames = map(kw -> splitarg(kw)[1], def[:kwargs])
     args = map(def[:args]) do ex
         name, type, slurp, default = splitarg(ex)
@@ -186,8 +181,11 @@ macro linear_kw(ex)
         t in kwnames && push!(traits, t)
     end
     :addto in kwnames && :coeff in kwnames && push!(traits, :addto_coeff)
-    isempty(traits) || addtraits!(traitex, def, traits)
-    esc(:($traitex; Base.@__doc__ $ex))
+
+    ex2 = Expr(:block, :(f = Base.@__doc__ $(esc(ex))))
+    isempty(traits) || addtraits!(ex2, def, traits)
+    push!(ex2.args, :f)
+    ex2
 end
 
 linear_extension_coeff_type(f::F, types...) where F = _coefftype(return_type(f, types...))
