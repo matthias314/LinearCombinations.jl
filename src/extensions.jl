@@ -166,7 +166,7 @@ macro linear_kw(ex)
 
     def = splitdef(ex1)
     f = def[:name]
-    FT = isexpr(f, :(::)) ? f.args[2] : :(typeof($f))
+    FT = isexpr(f, :(::)) ? f.args[end] : :(typeof($f))
     kwnames = map(kw -> splitarg(kw)[1], def[:kwargs])
     args = map(def[:args]) do ex
         name, type, slurp, default = splitarg(ex)
