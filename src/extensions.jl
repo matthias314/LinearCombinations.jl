@@ -173,7 +173,7 @@ macro linear_kw(ex)
         default === nothing || error("default argument values not supported")
         combinearg(nothing, :(Type{<:$type}), slurp, nothing)
     end
-    def[:args] = prepend!(args, (:(::$FT), :(::Val)))
+    def[:args] = prepend!(args::Vector, (:(::$FT), :(::Val)))   # "::Vector" for JET analysis
     def[:kwargs] = []
     def[:body] = :true
     traits = Symbol[]
@@ -330,6 +330,7 @@ end
 #
 
 has_char2(::Type{L}) where {T,R,L<:AbstractLinear{T,R}} = has_char2(R)
+has_char2(::Type{Union{}}) = error("not defined")   # for JET analysis
 
 has_char2(::Val{R}) where R <: Type = has_char2(R)
 

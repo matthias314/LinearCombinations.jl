@@ -176,8 +176,9 @@ axes(b::TensorBasis) = _cat(map(axes, b.bases)...)
     iterate(Iterators.map(Tensor, Iterators.product(b.bases...)), state...)
 
 _tobasis(::Tuple{}, ::Tuple{}, x...) = Tensor(x)
+_tobasis(::Tuple, ::Tuple{}, x...) = error("internal error")   # for JET analysis
 
-@propagate_inbounds function _tobasis(t::Tuple, ii, x...)
+@propagate_inbounds function _tobasis(t::Tuple, ii::Tuple, x...)
     l1 = ndims(t[1])
     x1 = t[1][ii[1:l1]...]
     _tobasis(t[2:end], ii[l1+1:end], x..., x1)

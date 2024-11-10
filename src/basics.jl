@@ -50,7 +50,7 @@ unval(::Val{c}) where c = c
 
 promote_typejoin(T...) = foldl(Base.promote_typejoin, T)
 
-push_kw(nt; kw...) = (; nt..., kw...)
+push_kw(nt::Union{NamedTuple, Base.Pairs}; kw...) = (; nt..., kw...)
 
 #
 # Add and Sub
