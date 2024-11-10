@@ -616,7 +616,7 @@ function -(a::AbstractLinear, x)
     if a isa Linear
         sub!(copy(a), x)
     else
-        sub!(convert(Linear, a), b)
+        sub!(convert(Linear, a), x)
     end
 end
 
