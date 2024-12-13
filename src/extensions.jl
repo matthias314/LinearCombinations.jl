@@ -182,7 +182,7 @@ macro linear_kw(ex)
     end
     :addto in kwnames && :coeff in kwnames && push!(traits, :addto_coeff)
 
-    ex2 = Expr(:block, :(f = Base.@__doc__ $(esc(ex))))
+    ex2 = Expr(:block, :(f = Core.@__doc__ $(esc(ex))))
     isempty(traits) || addtraits!(ex2, def, traits)
     push!(ex2.args, :f)
     ex2
