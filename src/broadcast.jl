@@ -2,8 +2,8 @@
 # broadcasting
 #
 
-using Base.Broadcast: Broadcasted, BroadcastStyle, DefaultArrayStyle
-import Base.Broadcast: instantiate
+using Base.Broadcast: Broadcasted, DefaultArrayStyle
+import Base.Broadcast: BroadcastStyle, instantiate
 
 const Tuple1 = Tuple{Any}
 const Tuple2 = Tuple{Any,Any}

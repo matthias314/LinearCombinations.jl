@@ -616,7 +616,7 @@ function tensormap(ff...)
     TensorMap(ff, revsums(map(deg, ff)))
 end
 
-Tuple(f::TensorMap) = f.ff
+Base.Tuple(f::TensorMap) = f.ff
 
 degsums(f::TensorMap) = f.degsums
 
