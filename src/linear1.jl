@@ -24,23 +24,28 @@ See also [`AbstractLinear`](@ref), [`Linear`](@ref), [`DenseLinear`](@ref).
 
 ```jldoctest
 julia> a = Linear1('x' => 1)
-x
+Linear1{Char, Int64} with 1 term:
+'x'
 
 julia> add!(a, 'x')
-2*x
+Linear1{Char, Int64} with 1 term:
+2*'x'
 
 julia> addmul!(a, 'x', -2)
+Linear1{Char, Int64} with 0 terms:
 0
 
 julia> a + 'y'   # works because a is zero
-y
+Linear1{Char, Int64} with 1 term:
+'y'
 
 julia> a + 'y' + 'z'
 ERROR: Linear1 cannot store linear combinations of two or more elements
 [...]
 
 julia> a = Linear1('x' => 1); b = Linear1('y' => 2); a+b
-x+2*y
+Linear{Char, Int64} with 2 terms:
+'x'+2*'y'
 
 julia> typeof(ans)
 Linear{Char, Int64}

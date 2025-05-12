@@ -59,19 +59,24 @@ julia> p('x')
 "xp"
 
 julia> a = Linear('x' => 1, 'y' => 2)
-x+2*y
+Linear{Char, Int64} with 2 terms:
+'x'+2*'y'
 
 julia> p(a)
-2*yp+xp
+Linear{String, Int64} with 2 terms:
+2*"yp"+"xp"
 
 julia> u = Linear(p => -1, q => 3)
+Linear{P{Char}, Int64} with 2 terms:
 3*P{Char}('q')-P{Char}('p')
 
 julia> u('x')
-3*xq-xp
+Linear{String, Int64} with 2 terms:
+3*"xq"-"xp"
 
 julia> u(a)
-3*xq-2*yp+6*yq-xp
+Linear{String, Int64} with 4 terms:
+3*"xq"-2*"yp"+6*"yq"-"xp"
 ```
 
 ## Broadcasting
@@ -109,13 +114,15 @@ To allow other scalar or term types, one has to use the macro `@linear_broadcast
 julia> @linear_broadcastable Char
 
 julia> a, b = Linear('x' => 1), Linear('y' => 2)
-(x, 2*y)
+(Linear{Char, Int64}('x' => 1), Linear{Char, Int64}('y' => 2))
 
 julia> a .+= b .+ 2 .* 'z'
-x+2*y+2*z
+Linear{Char, Int64} with 3 terms:
+'x'+2*'y'+2*'z'
 
 julia> a
-x+2*y+2*z
+Linear{Char, Int64} with 3 terms:
+'x'+2*'y'+2*'z'
 ```
 
 ```@docs

@@ -143,7 +143,7 @@ julia> ndims(b4)
 3
 
 julia> x = first(b4)
-(a⊗x)⊗a
+('a'⊗"x")⊗'a'
 
 julia> toindex(b4, x)
 CartesianIndex(1, 1, 1)
@@ -223,32 +223,32 @@ julia> azbasis = Basis('a':'z')
 Basis('a':1:'z')
 
 julia> a = DenseLinear('x' => 1, 'y' => 2; basis = azbasis)
-x+2*y
+DenseLinear{Char, Int64} with 2 terms:
+'x'+2*'y'
 
 julia> a + 'z'
-x+2*y+z
-
-julia> typeof(ans)
-DenseLinear{Char, Int64, Basis{Char, 1, StepRange{Char, Int64}}, Vector{Int64}}
+DenseLinear{Char, Int64} with 3 terms:
+'x'+2*'y'+'z'
 
 julia> a + 'X'
 ERROR: KeyError: key 'X' not found
 [...]
 
 julia> b = DenseLinear('x' => -1, 'z' => 3; basis = azbasis)
--x+3*z
+DenseLinear{Char, Int64} with 2 terms:
+-'x'+3*'z'
 
 julia> a + b
-2*y+3*z
-
-julia> typeof(ans)
-Linear{Char, Int64}
+Linear{Char, Int64} with 2 terms:
+2*'y'+3*'z'
 
 julia> c = DenseLinear('a' => 5; basis = Basis('a':'c'))
-5*a
+DenseLinear{Char, Int64} with 1 term:
+5*'a'
 
 julia> add!(a, c)
-5*a+x+2*y
+DenseLinear{Char, Int64} with 3 terms:
+5*'a'+'x'+2*'y'
 
 julia> add!(c, a)
 ERROR: KeyError: key 'x' not found

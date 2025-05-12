@@ -121,10 +121,11 @@ julia> rg = regroup(:( (1, (2, 3), 4) ), :( ((3, 1), (4, 2)) ))
 Regroup{(1, (2, 3), 4),((3, 1), (4, 2))}
 
 julia> t = Tensor("x", Tensor("y", "z"), "w")
-x⊗(y⊗z)⊗w
+"x"⊗("y"⊗"z")⊗"w"
 
 julia> rg(t)
-(z⊗x)⊗(w⊗y)
+Linear1{Tensor{Tuple{Tensor{Tuple{String, String}}, Tensor{Tuple{String, String}}}}, Int64} with 1 term:
+("z"⊗"x")⊗("w"⊗"y")
 ```
 
 # Example with degrees
@@ -134,7 +135,8 @@ For simplicity, we define the degree of a `String` to be its length.
 julia> $(@__MODULE__).deg(x::String) = length(x)
 
 julia> rg(t)   # same rg and t as before
--(z⊗x)⊗(w⊗y)
+Linear1{Tensor{Tuple{Tensor{Tuple{String, String}}, Tensor{Tuple{String, String}}}}, Int64} with 1 term:
+-("z"⊗"x")⊗("w"⊗"y")
 ```
 """
 function regroup(a, b)
@@ -179,19 +181,23 @@ See also [`Tensor`](@ref), [`deg`](@ref), [`regroup`](@ref), [`$(@__MODULE__).De
 
 ```jldoctest swap
 julia> t = Tensor("x", "z")
-x⊗z
+"x"⊗"z"
 
 julia> swap(t)
-z⊗x
+Linear1{Tensor{Tuple{String, String}}, Int64} with 1 term:
+"z"⊗"x"
 
 julia> a = Linear("x" => 1, "yy" => 1) ⊗ Linear("z" => 1, "ww" => 1)
-yy⊗ww+x⊗ww+x⊗z+yy⊗z
+Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
+"x"⊗"ww"+"yy"⊗"ww"+"yy"⊗"z"+"x"⊗"z"
 
 julia> swap(a)
-ww⊗yy+z⊗x+z⊗yy+ww⊗x
+Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
+"ww"⊗"x"+"z"⊗"yy"+"z"⊗"x"+"ww"⊗"yy"
 
 julia> swap(a; coeff = 2)
-2*ww⊗yy+2*z⊗x+2*z⊗yy+2*ww⊗x
+Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
+2*"ww"⊗"x"+2*"z"⊗"yy"+2*"z"⊗"x"+2*"ww"⊗"yy"
 ```
 ## Examples with degrees
 
@@ -200,10 +206,12 @@ For simplicity, we define the degree of a `String` to be its length.
 julia> $(@__MODULE__).deg(x::String) = length(x)
 
 julia> swap(t)   # same t as before
--z⊗x
+Linear1{Tensor{Tuple{String, String}}, Int64} with 1 term:
+-"z"⊗"x"
 
 julia> swap(a)   # same a as before
-ww⊗yy-z⊗x+z⊗yy+ww⊗x
+Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
+"ww"⊗"x"+"z"⊗"yy"-"z"⊗"x"+"ww"⊗"yy"
 ```
 """
 const swap = regroup(:((1,2)), :((2,1)))

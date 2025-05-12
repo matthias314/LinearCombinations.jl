@@ -18,7 +18,6 @@ determined to be `Char` and `Int` in the following example.
 ```@repl intro
 using LinearCombinations
 a = Linear('x' => 1, 'y' => 2)
-typeof(a)
 b = Linear('z' => 3, 'w' => -1)
 c = a + 2*b - 'v'
 c['y'], c['u']

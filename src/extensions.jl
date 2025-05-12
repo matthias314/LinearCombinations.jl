@@ -141,13 +141,16 @@ g (generic function with 2 methods)
 The linear extensions are functionally equivalent,  but `g` will be much faster than `f`.
 ```jldoctest addto-coeff
 julia> a = Linear('x' => 1, 'y' => 2)
-x+2*y
+Linear{Char, Int64} with 2 terms:
+'x'+2*'y'
 
 julia> f(a; coefftype = Float64, coeff = 2)
-4.0*Y-2.0*x-4.0*y+2.0*X
+Linear{Char, Float64} with 4 terms:
+4.0*'Y'-2.0*'x'-4.0*'y'+2.0*'X'
 
 julia> g(a; coefftype = Float64, coeff = 2)
-4.0*Y-2.0*x-4.0*y+2.0*X
+Linear{Char, Float64} with 4 terms:
+4.0*'Y'-2.0*'x'-4.0*'y'+2.0*'X'
 ```
 Test whether keywords have been registered:
 ```jldoctest addto-coeff
@@ -247,16 +250,20 @@ julia> f(x) = uppercase(x); @linear f
 f (generic function with 2 methods)
 
 julia> a = Linear('x' => 1, 'y' => 2)
-x+2*y
+Linear{Char, Int64} with 2 terms:
+'x'+2*'y'
 
 julia> f(a)
-2*Y+X
+Linear{Char, Int64} with 2 terms:
+2*'Y'+'X'
 
 julia> f(a; coefftype = Float64)
-2.0*Y+X
+Linear{Char, Float64} with 2 terms:
+2.0*'Y'+'X'
 
 julia> b = Linear('z' => 3); f(a; addto = b, coeff = -1); b
--2*Y-X+3*z
+Linear{Char, Int64} with 3 terms:
+-2*'Y'-'X'+3*'z'
 ```
 
 ## Linear extension of a function returning a linear combination
@@ -266,13 +273,15 @@ julia> g(x) = Linear(x*x => 1.0, string(x) => -1.0); @linear g
 g (generic function with 2 methods)
 
 julia> g("x"), g("")
-(xx-x, 0)
+(Linear{String, Float64}("xx" => 1.0, "x" => -1.0), Linear{String, Float64}())
 
 julia> g(a)   # same a as before
-xx-x+2.0*yy-2.0*y
+Linear{String, Float64} with 4 terms:
+"xx"-"x"+2.0*"yy"-2.0*"y"
 
 julia> g(a; coefftype = Val(Int), coeff = 3.0)
-3*xx-3*x+6*yy-6*y
+Linear{String, Int64} with 4 terms:
+3*"xx"-3*"x"+6*"yy"-6*"y"
 ```
 
 ## Linear extension of a callable object
@@ -283,7 +292,8 @@ julia> struct P y::String end
 julia> (p::P)(x) = p.y*x*p.y; @linear p::P
 
 julia> p = P("w"); p(a)   # same a as before
-wxw+2*wyw
+Linear{String, Int64} with 2 terms:
+"wxw"+2*"wyw"
 ```
 """
 macro linear(f)
@@ -363,7 +373,8 @@ julia> g('x')
 'X': ASCII/Unicode U+0058 (category Lu: Letter, uppercase)
 
 julia> a = Linear('x' => 1, 'y' => 2); g(a; coeff = 3)
-6*Y+3*X
+Linear{Char, Int64} with 2 terms:
+6*'Y'+3*'X'
 ```
 """
 struct LinearExtension{F}  # <: Function
@@ -506,16 +517,19 @@ See also [`@linear`](@ref), [`@linear_kw`](@ref), [`$(@__MODULE__).DefaultCoefft
 julia> f(x::Char, y::String) = x*y; @multilinear f
 
 julia> a, b = Linear('x' => 1, 'y' => 2), Linear("z" => 1.0, "w" => -1.0)
-(x+2*y, -w+z)
+(Linear{Char, Int64}('x' => 1, 'y' => 2), Linear{String, Float64}("w" => -1.0, "z" => 1.0))
 
 julia> f(a, "z")
-2*yz+xz
+Linear{String, Int64} with 2 terms:
+2*"yz"+"xz"
 
 julia> f('x', b)
--xw+xz
+Linear{String, Float64} with 2 terms:
+-"xw"+"xz"
 
 julia> f(a, b)
--xw+2.0*yz-2.0*yw+xz
+Linear{String, Float64} with 4 terms:
+-"xw"+2.0*"yz"-2.0*"yw"+"xz"
 ```
 
 ## Bilinear extension of a function returning a linear combination
@@ -524,7 +538,8 @@ julia> f(a, b)
 julia> f(x::Char, y::String) = Linear(x*y => BigInt(1), y*x => BigInt(-1)); @multilinear f
 
 julia> f(a, b)   # same a and b as before
--2.0*zy-xw-zx+2.0*yz+wx-2.0*yw+xz+2.0*wy
+Linear{String, BigFloat} with 8 terms:
+-2.0*"zy"-"xw"-"zx"+2.0*"yz"+"wx"-2.0*"yw"+"xz"+2.0*"wy"
 
 julia> typeof(ans)
 Linear{String, BigFloat}
@@ -536,13 +551,16 @@ Linear{String, BigFloat}
 julia> g(xs::Union{Char,String}...) = *(xs...); @multilinear g
 
 julia> g(a)   # same a and b as before
-x+2*y
+Linear{String, Int64} with 2 terms:
+"x"+2*"y"
 
 julia> g(a, b)
--xw+2.0*yz-2.0*yw+xz
+Linear{String, Float64} with 4 terms:
+-"xw"+2.0*"yz"-2.0*"yw"+"xz"
 
 julia> g(a, b, a)
--xwx+xzx+4.0*yzy+2.0*xzy+2.0*yzx-2.0*ywx-2.0*xwy-4.0*ywy
+Linear{String, Float64} with 8 terms:
+-"xwx"+"xzx"+4.0*"yzy"+2.0*"xzy"+2.0*"yzx"-2.0*"ywx"-2.0*"xwy"-4.0*"ywy"
 ```
 
 ## Multilinear extension using the two-argument version of `@multilinear`
@@ -551,7 +569,8 @@ julia> g(a, b, a)
 julia> @multilinear(h, *)
 
 julia> h(a, b; coeff = 2)   # same a and b as before
--2.0*xw+4.0*yz-4.0*yw+2.0*xz
+Linear{String, Float64} with 4 terms:
+-2.0*"xw"+4.0*"yz"-4.0*"yw"+2.0*"xz"
 ```
 """
 macro multilinear(f, f0 = f)
@@ -647,13 +666,14 @@ An element of this type is a multilinear extension of `f`. One can additionally 
 
 ```jldoctest
 julia> a, b = Linear('x' => 1, 'y' => 2), Linear("z" => 1.0, "w" => -1.0)
-(x+2*y, -w+z)
+(Linear{Char, Int64}('x' => 1, 'y' => 2), Linear{String, Float64}("w" => -1.0, "z" => 1.0))
 
 julia> const concat = MultilinearExtension(*, "concat")
 concat
 
 julia> concat(a, b)
--xw+2.0*yz-2.0*yw+xz
+Linear{String, Float64} with 4 terms:
+-"xw"+2.0*"yz"-2.0*"yw"+"xz"
 ```
 """
 MultilinearExtension(f::F, name = "MultilinearExtension($(repr(f)))") where F = MultilinearExtension{F}(f, name)

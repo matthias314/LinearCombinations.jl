@@ -43,35 +43,28 @@ See also [`Linear`](@ref), [`DenseLinear`](@ref), [`Linear1`](@ref),
 # Examples
 ```jldoctest abstractlinear
 julia> Linear('x' => 1, 'y' => 2)
-x+2*y
-
-julia> typeof(ans)
-Linear{Char, Int64}
+Linear{Char, Int64} with 2 terms:
+'x'+2*'y'
 
 julia> Linear(x => c for (c, x) in enumerate('u':'z'))
-3*w+2*v+4*x+u+5*y+6*z
+Linear{Char, Int64} with 6 terms:
+3*'w'+2*'v'+4*'x'+'u'+5*'y'+6*'z'
 
 julia> Linear{Char,Int}('x' => 1, 'y' => Int8(0), 'x' => 3.0)
-4*x
-
-julia> typeof(ans)
-Linear{Char, Int64}
+Linear{Char, Int64} with 1 term:
+4*'x'
 
 julia> a = Linear('x' => BigInt(1), "yz" => 2.0)
-x+2.0*yz
-
-julia> typeof(ans)
-Linear{Any, BigFloat}
+Linear{Any, BigFloat} with 2 terms:
+'x'+2.0*"yz"
 ```
 Iterating over a linear combination yields all non-zero term-coefficient
 pairs. Hence a linear combination can itself be used an argument to an
 `AbstractLinear` constructor.
 ```jldoctest abstractlinear
 julia> Linear{Union{Char,String}}(a)   # same a as before
-x+2.0*yz
-
-julia> typeof(ans)
-Linear{Union{Char, String}, BigFloat}
+Linear{Union{Char, String}, BigFloat} with 2 terms:
+'x'+2.0*"yz"
 ```
 """
 abstract type AbstractLinear{T,R} end
@@ -140,7 +133,8 @@ Iterating over a linear combination yields all non-zero term-coefficient pairs.
 # Examples
 ```jldoctest
 julia> a = Linear('x' => 1, 'y' => 2, 'z' => 0)
-x+2*y
+Linear{Char, Int64} with 2 terms:
+'x'+2*'y'
 
 julia> collect(a)
 2-element Vector{Pair{Char, Int64}}:
@@ -148,7 +142,8 @@ julia> collect(a)
  'y' => 2
 
 julia> Linear(x => c^2 for (x, c) in a)
-x+4*y
+Linear{Char, Int64} with 2 terms:
+'x'+4*'y'
 ```
 """
 @propagate_inbounds function iterate(a::AbstractLinear{T,R}, state...) where {T,R}
@@ -330,16 +325,19 @@ julia> function $(@__MODULE__).termcoeff((x, c)::Pair{Char})
        end
 
 julia> a = Linear('x' => 1, 'Y' => 2)
-x-2*y
+Linear{Char, Int64} with 2 terms:
+'x'-2*'y'
 
 julia> a['y'], a['Y']
 (-2, 2)
 
 julia> a['Y'] = 3; a
-x-3*y
+Linear{Char, Int64} with 2 terms:
+'x'-3*'y'
 
 julia> a + 'X'
--3*y
+Linear{Char, Int64} with 1 term:
+-3*'y'
 ```
 """
 termcoeff(xc::Pair) = xc
@@ -433,22 +431,19 @@ Keyword arguments are passed to the constructor for `L`.
 # Examples
 ```jldoctest
 julia> a = Linear{AbstractChar,Int}('x' => 2)
-2*x
+Linear{AbstractChar, Int64} with 1 term:
+2*'x'
 
 julia> b = convert(Linear{Char,Float64}, a)
-2.0*x
-
-julia> typeof(b)
-Linear{Char, Float64}
+Linear{Char, Float64} with 1 term:
+2.0*'x'
 
 julia> convert(Linear{Char,Int}, 'x') == Linear('x' => 1)
 true
 
 julia> convert(DenseLinear, a; basis = Basis('a':'z'))
-2*x
-
-julia> typeof(ans)
-DenseLinear{AbstractChar, Int64, Basis{Char, 1, StepRange{Char, Int64}}, Vector{Int64}}
+DenseLinear{AbstractChar, Int64} with 1 term:
+2*'x'
 ```
 """
 convert(::Type{L}, x; kw...) where L <: AbstractLinear = L(x => one(coefftype(L)); kw...)
