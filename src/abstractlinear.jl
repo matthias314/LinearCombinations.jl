@@ -37,8 +37,14 @@ with `linear_filter` and `termcoeff` before being stored
 in a linear combination. The keyword argument `is_filtered` controls
 whether `linear_filter` is called for each term.
 
+By default, linear combinations are displayed in a human-readable form
+with a limited number of terms. Dedicated `show` methods display all
+terms of a linear combination or return an expression that Julia can
+parse as input. See the examples below.
+
 See also [`Linear`](@ref), [`DenseLinear`](@ref), [`Linear1`](@ref),
-[`linear_filter`](@ref), [`$(@__MODULE__).termcoeff`](@ref)
+[`linear_filter`](@ref), [`$(@__MODULE__).termcoeff`](@ref),
+`Base.show`
 
 # Examples
 ```jldoctest abstractlinear
@@ -65,6 +71,23 @@ pairs. Hence a linear combination can itself be used an argument to an
 julia> Linear{Union{Char,String}}(a)   # same a as before
 Linear{Union{Char, String}, BigFloat} with 2 terms:
 'x'+2.0*"yz"
+```
+Various forms to display a linear combination.
+```jldoctest
+julia> a = Linear(x => 1 for x in 'a':'z')
+Linear{Char, Int64} with 26 terms:
+'n'+'f'+'w'+'d'+'e'+'o'+'h'+'j'+'i'+'k'+'r'+'s'+'t'+'q'+'y'+'a'+'c'+'p'+'m'+'z'±⋯
+
+julia> show(stdout, MIME"text/plain"(), a)  # all terms
+Linear{Char, Int64} with 26 terms:
+'n'+'f'+'w'+'d'+'e'+'o'+'h'+'j'+'i'+'k'+'r'+'s'+'t'+'q'+'y'+'a'+'c'+'p'+'m'+'z'+'g'+'v'+'l'+'u'+'x'+'b'
+
+julia> b = Linear('a' => 1, 'y' => 2)
+Linear{Char, Int64} with 2 terms:
+'a'+2*'y'
+
+julia> show(b)  # can be parsed as input
+Linear{Char, Int64}('a' => 1, 'y' => 2)
 ```
 """
 abstract type AbstractLinear{T,R} end
