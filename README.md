@@ -7,6 +7,7 @@ and coefficients can be in any commutative ring with unit.
 The overall aim of the package is to provide functions that are efficient and easy to use.
 
 The package comes with an extensive [documentation](https://matthias314.github.io/LinearCombinations.jl/stable/).
+For an application, see the package [SimplicialSets.jl](https://github.com/matthias314/SimplicialSets.jl).
 
 ## Examples
 
@@ -52,6 +53,8 @@ Linear{Char, Int64} with 2 terms:
 2*'Y'+'X'
 ```
 Another linear function, this time mapping terms to linear combinations.
+(A more efficient implementation of such a function would use the keyword arguments `addto` and `coeff`,
+see [`@linear_kw`](https://matthias314.github.io/LinearCombinations.jl/stable/extensions/#LinearCombinations.@linear_kw).)
 ```julia
 julia> @linear g; g(x::Char) = Linear(f(x) => 1, x => -1)
 g (generic function with 2 methods)
@@ -99,25 +102,29 @@ Linear{String, Int64} with 8 terms:
 ```
 In the following example we define a [tensor](https://matthias314.github.io/LinearCombinations.jl/stable/tensor/#LinearCombinations.Tensor) and swap the two components of each summand.
 ```julia
-julia> t = tensor(a, b)
+julia> a⊗b
 Linear{Tensor{Tuple{Char, Char}}, Int64} with 4 terms:
 -'x'⊗'w'-2*'y'⊗'w'+3*'x'⊗'z'+6*'y'⊗'z'
 
-julia> swap(t)
+julia> swap(a⊗b)
 Linear{Tensor{Tuple{Char, Char}}, Int64} with 4 terms:
 -'w'⊗'x'+3*'z'⊗'x'+6*'z'⊗'y'-2*'w'⊗'y'
 ```
-We finally take the tensor product of the functions `f` and `g` and apply it to `t`.
+We finally take the tensor product of the functions `f` and `g` and apply it to `a⊗b`.
 ```julia
-julia> k = tensor(f, g)
+julia> f⊗g
 Linear{Tensor{Tuple{typeof(f), typeof(g)}}, Int64} with 1 term:
 f⊗g
 
-julia> k(Tensor('x', 'z'))
+julia> (f⊗g)('x'⊗'z')
 Linear{Tensor{Tuple{Char, Char}}, Int64} with 2 terms:
 -'X'⊗'z'+'X'⊗'Z'
 
-julia> k(t)
+julia> (f⊗g)(a⊗b)
 Linear{Tensor{Tuple{Char, Char}}, Int64} with 8 terms:
 -3*'X'⊗'z'+2*'Y'⊗'w'+3*'X'⊗'Z'+'X'⊗'w'-'X'⊗'W'-2*'Y'⊗'W'-6*'Y'⊗'z'+6*'Y'⊗'Z'
 ```
+One can assign degrees to terms and maps. In this case tensor operations observe the usual sign rule.
+See [`deg`](https://matthias314.github.io/LinearCombinations.jl/stable/basics/#LinearCombinations.deg-Tuple{Any}),
+and [`swap`](https://matthias314.github.io/LinearCombinations.jl/stable/tensor/#LinearCombinations.swap)
+for an example.
