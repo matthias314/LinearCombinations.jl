@@ -270,11 +270,11 @@ function ==(a::AbstractLinear, b::AbstractLinear)
 end
 
 function Base.hash(a::AbstractLinear, h0::UInt)
-    h = StructEqualHash.typehash(AbstractLinear)
+    h = StructEqualHash.typehash(AbstractLinear, h0)
     for (x, c) in hashed_iter(a)
         h ⊻= hash(c, hash(x))
     end
-    hash(h, h0)
+    h
 end
 
 zero(::T) where T <: AbstractLinear = zero(T)

@@ -50,6 +50,8 @@ Calling objects is extended linearly. Here is an example:
 ```jldoctest
 julia> struct P{T} y::T end
 
+julia> Base.hash(p::P, h::UInt) = hash(p.y, hash(P, h));  # `Linear` uses hashing
+
 julia> @linear p::P; (p::P)(x) = x * p.y
 
 julia> p, q = P('p'), P('q')
@@ -68,7 +70,7 @@ Linear{String, Int64} with 2 terms:
 
 julia> u = Linear(p => -1, q => 3)
 Linear{P{Char}, Int64} with 2 terms:
-3*P{Char}('q')-P{Char}('p')
+-P{Char}('p')+3*P{Char}('q')
 
 julia> u('x')
 Linear{String, Int64} with 2 terms:

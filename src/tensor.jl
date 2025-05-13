@@ -4,8 +4,6 @@
 
 export AbstractTensor
 
-using StructEqualHash: typehash
-
 """
     AbstractTensor{T<:Tuple}
 
@@ -48,9 +46,7 @@ julia> map(isuppercase, Tuple(t))
 """
 Base.Tuple(t::AbstractTensor) = error_missing(typeof(t))
 
-==(t1::AbstractTensor, t2::AbstractTensor) = Tuple(t1) == Tuple(t2)
-
-Base.hash(t::AbstractTensor, h::UInt) = hash((Tuple(t),), typehash(AbstractTensor, h))
+@struct_equal_hash AbstractTensor
 
 length(t::AbstractTensor) = length(Tuple(t))
 
