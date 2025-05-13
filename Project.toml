@@ -1,7 +1,7 @@
 name = "LinearCombinations"
 uuid = "67be3549-475c-46bf-8928-de3404d670d9"
 authors = ["matthias314"]
-version = "0.4.1"
+version = "0.4.2"
 
 [deps]
 StructEqualHash = "8bd03d06-bfef-4aaf-8250-1a26cbb401bf"
