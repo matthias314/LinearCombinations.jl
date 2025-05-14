@@ -230,6 +230,14 @@ end
         c = Linear{Char,R}('z' => 3)
         @test a == @inferred .+ a
         @test -a == @inferred .- a
+        aa = @inferred a .+ 'x'
+        @test  aa == a + 'x'
+        aa = @inferred a .- 'x'
+        @test  aa == a - 'x'
+        aa = @inferred a .+ 'y'
+        @test  aa == a + 'y'
+        aa = @inferred a .- 'y'
+        @test  aa == a - 'y'
         @test a + b == @inferred a .+ b
         @test a - b == @inferred a .- b
         @test 3*a == @inferred 3 .* a
