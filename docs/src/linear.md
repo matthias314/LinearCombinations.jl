@@ -33,6 +33,13 @@ sizehint!
 convert
 ```
 
+### Additional functions for `DenseLinear`
+
+```@docs
+basis
+coordinates
+```
+
 ## Arithmetic
 
 ```@docs
