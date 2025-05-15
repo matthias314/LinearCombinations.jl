@@ -676,13 +676,12 @@ end
 
 +(a::AbstractLinear, x) = add!(copy(a), x)
 +(x, a::AbstractLinear) = a + x
-+(a::AbstractLinear, ::Zero) = a
-+(::Zero, a::AbstractLinear) = a
-# +(a::AbstractLinear) = copy(a)
-+(a::AbstractLinear) = a
++(a::AbstractLinear, ::Zero) = +a
++(::Zero, a::AbstractLinear) = +a
++(a::AbstractLinear) = copy(a)  # see julia#58295
 
 function -(a::AbstractLinear{T,R}) where {T,R}
-    has_char2(R) ? a : mul!(copy(a), MINUSONE)
+    has_char2(R) ? copy(a) : mul!(copy(a), MINUSONE)
 end
 
 function -(a::AbstractLinear, x)

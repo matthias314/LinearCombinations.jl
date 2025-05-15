@@ -100,6 +100,8 @@ end
     @test @inferred(addmul(a, 'w', -1)) == a - 'w'
     @test @inferred(addmul(a, 'w', -2)) == a - Linear('w' => 2)
 
+    @test +a == a && +a !== a  # see julia#58295
+
     aa = copy(a)
     @test @inferred(addmul!(aa, 'w', 0)) === aa
     @test aa == a
