@@ -44,7 +44,7 @@ parse as input. See the examples below.
 
 See also [`Linear`](@ref), [`DenseLinear`](@ref), [`Linear1`](@ref),
 [`linear_filter`](@ref), [`$(@__MODULE__).termcoeff`](@ref),
-`Base.show`
+`Base.show`, `Base.repr`
 
 # Examples
 ```jldoctest abstractlinear
@@ -82,12 +82,15 @@ julia> show(stdout, MIME"text/plain"(), a)  # all terms
 Linear{Char, Int64} with 26 terms:
 'n'+'f'+'w'+'d'+'e'+'o'+'h'+'j'+'i'+'k'+'r'+'s'+'t'+'q'+'y'+'a'+'c'+'p'+'m'+'z'+'g'+'v'+'l'+'u'+'x'+'b'
 
-julia> b = Linear('a' => 1, 'y' => 2)
+julia> b = Linear('x' => 1, 'y' => 2)
 Linear{Char, Int64} with 2 terms:
-'a'+2*'y'
+'x'+2*'y'
+
+julia> repr("text/plain", b; context = :compact => true)  # string without the first line
+"'x'+2*'y'"
 
 julia> show(b)  # can be parsed as input
-Linear{Char, Int64}('a' => 1, 'y' => 2)
+Linear{Char, Int64}('x' => 1, 'y' => 2)
 ```
 """
 abstract type AbstractLinear{T,R} end
