@@ -709,7 +709,9 @@ function -(a::AbstractLinear{T,R}, b::AbstractLinear{U,S}) where {T,R,U,S}
     end
 end
 
-function *(c::S, a::L) where {S,T,R,L<:AbstractLinear{T,R}}
+function *(a::AbstractLinear, c)
+    S = typeof(c)
+    L, T, R = typeof(a), termtype(a), coefftype(a)
     RS = promote_type(R, S)
     if RS == R
         mul!(copy(a), c)
@@ -718,7 +720,7 @@ function *(c::S, a::L) where {S,T,R,L<:AbstractLinear{T,R}}
     end
 end
 
-*(a::AbstractLinear, c) = c*a
+*(c, a::AbstractLinear) = a*c
 
 -(a::AbstractLinear, ::Zero) = a
 -(::Zero, a::AbstractLinear) = -a
