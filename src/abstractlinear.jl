@@ -613,11 +613,17 @@ end
     addmul(a::AbstractLinear, x, c)
 
 Add the `c`-fold multiple of the linear combination `b` or of the term `x` to `a`,
-where `c` is a scalar.
+where `c` is a scalar. If necessary, the coefficient type of `a` is widened to
+a type that can receive `c` and the coefficients of `b`.
 
 See also [`addmul!`](@ref).
 """
-addmul(a::AbstractLinear, b, c) = addmul!(copy(a), b, c)
+function addmul(a::L, b, c::S) where {L <: AbstractLinear, S}
+    R = coefftype(L)
+    U = promote_type(R, S, _coefftype(b))
+    aa = U == R ? copy(a) : convert(change_coefftype(L, U), a)
+    addmul!(aa, b, c)
+end
 
 """
     add!(a::AbstractLinear, b::AbstractLinear) -> a

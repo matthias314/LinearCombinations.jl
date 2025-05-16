@@ -120,7 +120,8 @@ end
 
     b = Linear('x' => -1.0, 'z' => 3.0)
     aa = addmul(a, b, 2.0)
-    @test typeof(aa) == typeof(a)
+    @test termtype(aa) == termtype(a)
+    @test coefftype(aa) == promote_type(coefftype(a), coefftype(b), Float64)
     @test @inferred(addmul(a, b, 0)) == a
     @test @inferred(addmul(a, b, 1)) == a + b
     @test @inferred(addmul(a, b, 2)) == a + 2*b
