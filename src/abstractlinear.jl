@@ -378,11 +378,13 @@ function show(io::IO, a::L) where L <: AbstractLinear
         print(io, '{', termtype(L), ", ", coefftype(L), '}')
     end
     print(io, '(')
-    if get(io, :limit, false) && length(a) > LINEAR_SHOW_MAX
-        join(io, Iterators.take(a, LINEAR_SHOW_MAX), ", ")
-        print(io, " …")
-    else
-        join(io, a, ", ")
+    let io = IOContext(io, :typeinfo => eltype(a))
+        if get(io, :limit, false) && length(a) > LINEAR_SHOW_MAX
+            join(io, Iterators.take(a, LINEAR_SHOW_MAX), ", ")
+            print(io, " …")
+        else
+            join(io, a, ", ")
+        end
     end
     show_extra_params(io, a)
     print(io, ')')
