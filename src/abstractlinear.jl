@@ -408,6 +408,14 @@ function show_coeff(io::IO, c)
     show_needsparen(c) && print(io, ')')
 end
 
+"""
+    $(@__MODULE__).show_summand(io::IO, x, c)
+
+This function is called for each term-coefficient pair `x => c` of a linear
+combination that is displayed. By defining additional methods for this
+function, the output that it printed for certain term or coefficient types
+can be customized.
+"""
 function show_summand(io::IO, x, c)
     show_coeff(io, c)
     print(io, '*')

@@ -10,4 +10,5 @@ LinearCombinations.unhash
 LinearCombinations.unval
 LinearCombinations.Zero
 LinearCombinations.LinearStyle
+LinearCombinations.show_summand
 ```
