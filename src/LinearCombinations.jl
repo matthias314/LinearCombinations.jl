@@ -1,5 +1,5 @@
 """
-    LinearCombinations
+    $(@__MODULE__)
 
 A Julia package to work with formal linear combinations, tensors
 and linear as well as multilinear maps.

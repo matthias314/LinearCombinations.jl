@@ -190,7 +190,7 @@ has_char2(::Type) = false
 has_char2(::Missing) = false
 
 """
-    LinearCombinations.signed(k, x)
+    $(@__MODULE__).signed(k, x)
 
 Return a value representing `(-1)^k*x`. The default definition is
 ```julia
