@@ -697,7 +697,7 @@ end
 +(a::AbstractLinear) = copy(a)  # see julia#58295
 
 function -(a::AbstractLinear{T,R}) where {T,R}
-    has_char2(R) ? copy(a) : mul!(copy(a), MINUSONE)
+    has_char2(R) ? copy(a) : mul!(copy(a), -ONE)
 end
 
 function -(a::AbstractLinear, x)

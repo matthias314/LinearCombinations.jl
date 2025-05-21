@@ -74,7 +74,6 @@ struct Sign
 end
 
 const ONE = Sign(false)
-const MINUSONE = Sign(true)
 
 one(::Type{Sign}) = ONE
 one(::Sign) = one(Sign)
