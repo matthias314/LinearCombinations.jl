@@ -597,10 +597,9 @@ deg(g::TensorSplat) = deg(g.f)
 # concatenating and flattening tensors
 #
 
-_cat() = ()
-_cat(x) = (x...,)
-# needed for conversion of Tensor (and ProductSimplex) to Tuple
-_cat(x, y, z...) = _cat((x..., y...), z...)
+tuple_cat() = tuple()
+tuple_cat(x) = tuple(x...)  # needed for conversion of Tensor (and ProductSimplex) to Tuple
+tuple_cat(x, y, z...) = tuple_cat(tuple(x..., y...), z...)
 
 @multilinear cat
 
@@ -618,12 +617,12 @@ julia> $(@__MODULE__).cat(Tensor('x'), Tensor('y', Tensor('z', 'w')))
 'x'⊗'y'⊗('z'⊗'w')
 ```
 """
-cat(t::AbstractTensor...) = Tensor(_cat(t...))
+cat(t::AbstractTensor...) = Tensor(tuple_cat(t...))
 
 # TODO: add keeps_filtered?
 
-_flatten(x) = (x,)
-_flatten(x::AbstractTensor) = _cat(map(_flatten, Tuple(x))...)
+tuple_flatten(x) = (x,)
+tuple_flatten(x::AbstractTensor) = tuple_cat(map(tuple_flatten, Tuple(x))...)
 
 @linear flatten
 # no keywords
@@ -647,7 +646,7 @@ julia> flatten(t)
 'x'⊗'y'⊗'z'⊗'w'
 ```
 """
-flatten(t::AbstractTensor) = Tensor(_flatten(t))
+flatten(t::AbstractTensor) = Tensor(tuple_flatten(t))
 
 keeps_filtered(::typeof(flatten), ::Type{<:AbstractTensor}) = true
 

@@ -168,7 +168,7 @@ function show(io::IO, b::TensorBasis)
     print(io, ')')
 end
 
-axes(b::TensorBasis) = _cat(map(axes, b.bases)...)
+axes(b::TensorBasis) = tuple_cat(map(axes, b.bases)...)
 
 ==(b1::TensorBasis, b2::TensorBasis) = b1.bases == b2.bases
 
