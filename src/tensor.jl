@@ -791,7 +791,7 @@ function (tf::AbstractTensor)(ttx::Vararg{AbstractTensor,N};
     if haskey(kw, :addto) || haskey(kw, :coefftype)
         tensor(tfx...; coeff, is_filtered = tensor_if, kw...)
     else
-        R = promote_type(map(_coefftype, tfx)..., sign_type(typeof(m)))
+        R = promote_type(map(_coefftype, tfx)..., signtype(typeof(m)))
         if R === Sign
             R = DefaultCoefftype
         end
@@ -903,7 +903,7 @@ Linear{Tensor{Tuple{String, String, String}}, Int64} with 3 terms:
 
     if addto === missing
         if R === missing
-            R = promote_type(map(_coefftype, dx)..., map(sign_type ∘ typeof, degx)...)
+            R = promote_type(map(_coefftype, dx)..., map(signtype ∘ typeof, degx)...)
         end
         addto = zero(Linear{T,R})
     end

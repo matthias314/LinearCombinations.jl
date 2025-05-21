@@ -114,7 +114,7 @@ end
 
 promote_rule(::Type{Sign}, ::Type{R}) where R = R
 
-sign_type(::Type{T}) where T <: Integer = Sign
+signtype(::Type{T}) where T <: Integer = Sign
 
 # Zero
 
@@ -153,7 +153,7 @@ promote_rule(::Type{Zero}, ::Type{R}) where R = R
 convert(::Type{R}, ::Zero) where R <: Number = zero(R)
     # added "<: Number" to reduce invalidations
 
-sign_type(::Type{Zero}) = Sign
+signtype(::Type{Zero}) = Sign
 
 #
 # macro-like functions
