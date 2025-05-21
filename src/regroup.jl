@@ -251,7 +251,7 @@ Base.@assume_effects :foldable :nothrow @generated function regroup_tensor_signe
     end
 end
 
-@inline regroup_sign(rg, x, c) = signed(regroup_tensor_signexp(rg, _getindex, x), c)
+@inline regroup_sign(rg, x, c) = withsign(regroup_tensor_signexp(rg, _getindex, x), c)
 
 @inline regroup_term(rg, x) = regroup_eval_expr(rg, _getindex, Tensor, x)
 

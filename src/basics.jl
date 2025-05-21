@@ -194,15 +194,15 @@ has_char2(::T) where T = has_char2(T)
 has_char2(::Missing) = false  # TODO: needed?
 
 """
-    $(@__MODULE__).signed(k, x)
+    $(@__MODULE__).withsign(k, x)
 
 Return a value representing `(-1)^k*x`. The default definition is
 ```julia
-signed(k, x) = has_char2(x) || iseven(k) ? x : -x
+withsign(k, x) = has_char2(x) || iseven(k) ? x : -x
 ```
 Additional methods may be needed to support more exotic coefficient types.
 """
-signed(k, x) = has_char2(x) || iseven(k) ? x : -x
+withsign(k, x) = has_char2(x) || iseven(k) ? x : -x
 
 sum0(itr) = sum(itr; init = Zero())
 sum0(f, itr) = sum(f, itr; init = Zero())

@@ -361,7 +361,7 @@ Linear1{Tensor{Tuple{Tensor{Tuple{String, String}}, Tensor{Tuple{String, String}
     tt = transpose_nosign(t)
     if addto !== missing || !has_char2(addto)
         m = transpose_signexp(t)
-        coeff = signed(m, coeff)
+        coeff = withsign(m, coeff)
     end
     if addto === missing
         if coefftype !== missing
@@ -784,7 +784,7 @@ function (tf::AbstractTensor)(ttx::Vararg{AbstractTensor,N};
 
     if !has_char2(map(_coefftype, tfx)...; kw...)
         m = transpose_signexp(Tensor(tf, ttx...))
-        coeff = signed(m, coeff)
+        coeff = withsign(m, coeff)
     else
         m = Zero()
     end
@@ -821,7 +821,7 @@ function tensor_diff(addto, coeff, x, dx, degx, sizehint)
     isempty(dx) && return addto
     dx1, dx... = dx
     degx1, degx... = degx
-    coeff = signed(degx1, coeff)
+    coeff = withsign(degx1, coeff)
     k = length(x)-length(dx)
     tensor(x[1:k-1]..., dx1, x[k+1:end]...; addto, coeff, sizehint)
     tensor_diff(addto, coeff, x, dx, degx, sizehint)

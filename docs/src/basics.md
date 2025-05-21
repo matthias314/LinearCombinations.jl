@@ -15,5 +15,5 @@ deg(::Any)
 ```@docs
 LinearCombinations.has_char2
 LinearCombinations.is_domain
-LinearCombinations.signed
+LinearCombinations.withsign
 ```
