@@ -178,6 +178,7 @@ is_domain(::Type{<:Union{Real,Complex}}) = true
 
 """
     has_char2(::Type{R}) where R -> Bool
+    has_char2(x::R) where R -> Bool
 
 Return `true` if the ring `R` is known to have characteristic `2` and `false` otherwise.
 
@@ -186,19 +187,22 @@ avoids (possibly expensive) sign computations.
 
 See also [`is_domain`](@ref).
 """
+has_char2
+
 has_char2(::Type) = false
-has_char2(::Missing) = false
+has_char2(::T) where T = has_char2(T)
+has_char2(::Missing) = false  # TODO: needed?
 
 """
     $(@__MODULE__).signed(k, x)
 
 Return a value representing `(-1)^k*x`. The default definition is
 ```julia
-signed(k, x::R) where R = has_char2(R) || iseven(k) ? x : -x
+signed(k, x) = has_char2(x) || iseven(k) ? x : -x
 ```
 Additional methods may be needed to support more exotic coefficient types.
 """
-signed(k, x::R) where R = has_char2(R) || iseven(k) ? x : -x
+signed(k, x) = has_char2(x) || iseven(k) ? x : -x
 
 sum0(itr) = sum(itr; init = Zero())
 sum0(f, itr) = sum(f, itr; init = Zero())

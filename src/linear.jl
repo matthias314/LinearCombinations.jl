@@ -96,8 +96,8 @@ function modifycoeff!(op::AddSub, a::Linear{T,R}, x, c) where {T,R}
     a
 end
 
-function -(a::Linear{T,R}) where {T,R}
-    if has_char2(R)
+function -(a::Linear)
+    if has_char2(a)
         a
     else
         b = copy(a)
