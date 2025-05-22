@@ -222,22 +222,22 @@ const swap = regroup(:((1,2)), :((2,1)))
 # regrouping of tensors
 #
 
-_length(::Type{T}) where T <: Tuple = length(fieldtypes(T))
-_length(::Type{<:AbstractTensor{T}}) where T <: Tuple = _length(T)
+regroup_length(::Type{T}) where T <: Tuple = length(fieldtypes(T))
+regroup_length(::Type{<:AbstractTensor{T}}) where T <: Tuple = regroup_length(T)
 
-_getindex(x) = x
-@propagate_inbounds _getindex(x, i) = x[i]
-@propagate_inbounds _getindex(x, i, ii...) = _getindex(_getindex(x, i), ii...)
+regroup_getindex(x) = x
+@propagate_inbounds regroup_getindex(x, i) = x[i]
+@propagate_inbounds regroup_getindex(x, i, ii...) = regroup_getindex(regroup_getindex(x, i), ii...)
 
-@propagate_inbounds _getindex(::Type{T}, i) where T <: Tuple = fieldtype(T, i)
-@propagate_inbounds _getindex(::Type{<:AbstractTensor{T}}, i) where T <: Tuple = _getindex(T, i)
+@propagate_inbounds regroup_getindex(::Type{T}, i) where T <: Tuple = fieldtype(T, i)
+@propagate_inbounds regroup_getindex(::Type{<:AbstractTensor{T}}, i) where T <: Tuple = regroup_getindex(T, i)
 
 regroup_check_arg(::Type, ::Type, ::Type) = true
 
 Base.@assume_effects :nothrow function regroup_check_arg(::Type{T}, ::Type{TT}, ::Type{TX}) where {T,TT<:Tuple,TX}
-    n = _length(TT)
-    TX <: T && _length(TX) == n &&
-        all(ntuple(i -> regroup_check_arg(T, _getindex(TT, i), _getindex(TX, i)), n))
+    n = regroup_length(TT)
+    TX <: T && regroup_length(TX) == n &&
+        all(ntuple(i -> regroup_check_arg(T, regroup_getindex(TT, i), regroup_getindex(TX, i)), n))
 end
 
 # @assume_effects allows to omit the sign computation for has_char2 coefficients
@@ -251,9 +251,9 @@ Base.@assume_effects :foldable :nothrow @generated function regroup_tensor_signe
     end
 end
 
-@inline regroup_sign(rg, x, c) = withsign(regroup_tensor_signexp(rg, _getindex, x), c)
+@inline regroup_sign(rg, x, c) = withsign(regroup_tensor_signexp(rg, regroup_getindex, x), c)
 
-@inline regroup_term(rg, x) = regroup_eval_expr(rg, _getindex, Tensor, x)
+@inline regroup_term(rg, x) = regroup_eval_expr(rg, regroup_getindex, Tensor, x)
 
 @linear_kw function (rg::Regroup{A,B})(x::T;
         coefftype = missing,
