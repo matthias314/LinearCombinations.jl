@@ -203,6 +203,7 @@ export DenseLinear, basis, coordinates
     DenseLinear{T,R} <: AbstractLinear{T,R}
 
     DenseLinear{T,R}(itr; basis::Basis)
+    DenseLinear{T,R}(v::AbstractArray; basis::Basis)
 
 Construct a linear combination of type `DenseLinear` with term type `T` and
 coefficient type `R` out of the term-coefficient pairs provided by the iterator `itr`.
@@ -211,6 +212,11 @@ Linear combinations of this type are internally stored as a `Vector` (or, more g
 an `AbstractArray`). The mandatory keyword argument `basis` is used to translate between
 terms and entries of the `Vector` (or `Array`). Operations involving two `DenseLinear`
 elements are much faster when the two bases are identical (in the sense of `===`).
+
+The argument can also be an `AbstractVector` (or `AbstractArray`) of the same size as the
+given basis. The entries of this vector (or array) are interpreted as the coordinates of
+the linear combination with respect to the given basis. The vector (or array) gets modified
+whenever the linear combinations is. It can be retrieved with the function `coordinates`.
 
 Other ways to use this constructor are discussed under `AbstractLinear`.
 
@@ -253,6 +259,22 @@ DenseLinear{Char, Int64} with 3 terms:
 
 julia> add!(c, a)
 ERROR: KeyError: key 'x' not found
+
+julia> v = [1, 2, 3];
+
+julia> d = DenseLinear(v; basis = Basis('a':'c'))
+DenseLinear{Char, Int64} with 3 terms:
+'a'+2*'b'+3*'c'
+
+julia> d .-= 'b'
+DenseLinear{Char, Int64} with 3 terms:
+'a'+'b'+3*'c'
+
+julia> v
+3-element Vector{Int64}:
+ 1
+ 1
+ 3
 ```
 """
 struct DenseLinear{T,R,B,A} <: AbstractLinear{T,R}
