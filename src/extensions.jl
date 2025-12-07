@@ -178,15 +178,19 @@ macro linear_kw(ex)
     end
     def[:args] = prepend!(args::Vector, (:(::$FT), :(::Val)))   # "::Vector" for JET analysis
     def[:kwargs] = []
-    def[:body] = :true
+
     traits = Symbol[]
+    notraits = Symbol[]
     for t in (:coefftype, :is_filtered, :sizehint)
-        t in kwnames && push!(traits, t)
+        push!(t in kwnames ? traits : notraits, t)
     end
-    :addto in kwnames && :coeff in kwnames && push!(traits, :addto_coeff)
+    push!(:addto in kwnames && :coeff in kwnames ? traits : notraits, :addto_coeff)
 
     ex2 = Expr(:block, :(f = Core.@__doc__ $(esc(ex))))
+    def[:body] = :true
     isempty(traits) || addtraits!(ex2, def, traits)
+    def[:body] = :false
+    isempty(notraits) || addtraits!(ex2, def, notraits)
     push!(ex2.args, :f)
     ex2
 end
