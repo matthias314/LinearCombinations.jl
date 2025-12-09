@@ -391,7 +391,7 @@ function show(io::IO, a::L) where L <: AbstractLinear
 end
 
 show_term(io::IO, x) = show(io, MIME"text/plain"(), x)
-show_term(io::IO, x::Union{AbstractArray,AbstractDict}) = show(io, x)
+show_term(io::IO, x::Union{AbstractArray,AbstractDict,AbstractSet}) = show(io, x)
 
 show_needsplus(c) = true
 show_needsplus(c::Real) = !signbit(c)
