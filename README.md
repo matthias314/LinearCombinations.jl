@@ -76,12 +76,12 @@ Linear{String, Int64} with 4 terms:
 ```
 The next example is a user-defined bilinear function. Bilinearity is achieved by the macro [`@multilinear`](https://matthias314.github.io/LinearCombinations.jl/stable/extensions/#LinearCombinations.@multilinear).
 ```julia
-julia> @multilinear h; h(x, y) = x*y*x
+julia> @multilinear h; h(x::Char, y::Char) = x*y*x
 h (generic function with 2 methods)
 
 julia> h(a, b)
-Linear{String, Int64} with 8 terms:
--"xwx"+3*"xzx"+12*"yzy"+6*"xzy"+6*"yzx"-2*"ywx"-2*"xwy"-4*"ywy"
+Linear{String, Int64} with 4 terms:
+-"xwx"+3*"xzx"+6*"yzy"-2*"ywy"
 ```
 Here is a user-defined multilinear function with a variable number of arguments.
 ```julia
