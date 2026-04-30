@@ -1,6 +1,7 @@
 using LinearCombinations, Test
 
 using LinearCombinations: Sign, Zero, ONE, unval, DefaultCoefftype
+using StructEqualHash
 
 @testset "Sign" begin
     s0::Sign = 1
@@ -280,6 +281,16 @@ end
 
 @linear g
 
+struct H
+    x::Char
+end
+
+@struct_equal_hash H
+
+(h::H)(y) = h.x * y
+
+@linear ::H
+
 @testset "@linear" begin
     for R in (Int8, Int, Float64, BigFloat)
         a = Linear{Char,R}('x' => 1, 'y' => 2, 'z' => 3)
@@ -313,6 +324,10 @@ end
         d = zero(Linear{Char,BigInt})
         c = @inferred g(a; addto = d)
         @test c === d == b
+
+        h = H('h')
+        c = @inferred h(a)
+        @test c == 'h' * a
     end
 end
 

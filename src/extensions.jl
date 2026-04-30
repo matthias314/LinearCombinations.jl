@@ -207,8 +207,10 @@ end
 
 """
     @linear f
+    @linear ::F
+    @linear f::F
 
-This macro defines a linear extension of the function (or callable object) `f`.
+This macro defines a linear extension of the function `f` (or a callable object of type `F`).
 More specifically, it defines a new method `f(a::AbstractLinear{T,R}; kw...) where {T,R}` that returns
 the linear combination obtained by summing up `c*f(x)` for all term-coefficient pairs `x => c`
 appearing in `a`.
@@ -293,7 +295,7 @@ Linear{String, Int64} with 4 terms:
 ```jldoctest linear
 julia> struct P y::String end
 
-julia> (p::P)(x) = p.y*x*p.y; @linear p::P
+julia> (p::P)(x) = p.y*x*p.y; @linear ::P  # or `@linear p::P`
 
 julia> p = P("w"); p(a)   # same a as before
 Linear{String, Int64} with 2 terms:
@@ -301,7 +303,7 @@ Linear{String, Int64} with 2 terms:
 ```
 """
 macro linear(f)
-    F = esc(f)
+    F = Meta.isexpr(f, :(::), 1) ? Expr(:(::), :f, esc(f.args[1])) : esc(f)
     quote
         function $F(a::L;
                 coefftype = promote_type(R, linear_extension_coeff_type($F, T)),
@@ -483,13 +485,18 @@ _length(a::AbstractLinear) = length(a)
 end
 
 """
-    @multilinear f
-    @multilinear f f0
+    @multilinear f [f0]
+    @multilinear ::F [f0]
+    @multilinear f::F [f0]
 
-This macro defines a multilinear extension of the function `f` (or `f0`). This is analogous to `@linear f`.
+This macro defines a multilinear extension of the function `f` (or the callable object of type `F`). This is analogous to `@linear f`.
 The new methods accepts both terms and linear combinations as arguments. It linearly expands all arguments that are
 linear combinations and then calls `f` for each combination of terms. If `f0` is specified, then `f0` is called
-instead to evaluate terms.
+instead to evaluate terms. In other words, `f` is the multilinear extension of `f0` in this case.
+
+The new method defined by `@multilinear` accepts all keyword arguments discussed for `@linear`. Unknown
+keyword arguments are passed on to the call for term evaluation. The macro `@linear_kw` works as for
+linear functions.
 
 The new method always returns a linear combination (of type `Linear` unless this is overriden by the `addto`
 keyword). The term type is inferred from the return type of `f` (or `f0`) with terms as arguments. The coefficient type
@@ -501,10 +508,6 @@ In order to catch all possible combinations of terms and linear combinations, `@
 (This is different from `@linear`.) Hence, if `f0` is not given, then the methods for `f` that evaluate
 terms must have a non-generic signature. If instead the signature also is `f(x::Any...)`, then this
 method is overwritten, resulting in an error when `f` is called.
-
-The new method defined by `@multilinear` accepts all keyword arguments discussed for `@linear`. Unknown
-keyword arguments are passed on to the call for term evaluation. The macro `@linear_kw` works as for
-linear functions.
 
 If the two-argument version of `@multilinear` is used, then typically there is no other method for `f`.
 Hence `f` returns a linear combination for all arguments in this case. If all arguments are terms and also `f0`
@@ -578,8 +581,8 @@ Linear{String, Float64} with 4 terms:
 ```
 """
 macro multilinear(f, f0 = f)
-    F = esc(f)
-    F0 = esc(f0)
+    F = Meta.isexpr(f, :(::), 1) ? Expr(:(::), :f, esc(f.args[1])) : esc(f)
+    F0 = f0 == f ? F : esc(f0)
     if f0 == f
         traits = quote end
     else
