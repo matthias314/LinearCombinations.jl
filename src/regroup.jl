@@ -83,7 +83,7 @@ struct Regroup{A,B} end
 
 regroup_get(::Type{T}, field) where T <: Regroup = regroup_cache[T][field]
 
-show(io::IO, rg::Regroup{A,B}) where {A,B} = print(io, "Regroup{$A,$B}")
+show(io::IO, rg::Regroup{A,B}) where {A,B} = print(io, "Regroup{$A, $B}")
 
 """
     regroup(a, b) -> Regroup
@@ -118,7 +118,7 @@ See also [`swap`](@ref), [`regroup_inv`](@ref), [`Regroup`](@ref), [`$(@__MODULE
 
 ```jldoctest regroup
 julia> rg = regroup(:( (1, (2, 3), 4) ), :( ((3, 1), (4, 2)) ))
-Regroup{(1, (2, 3), 4),((3, 1), (4, 2))}
+Regroup{(1, (2, 3), 4), ((3, 1), (4, 2))}
 
 julia> t = Tensor("x", Tensor("y", "z"), "w")
 "x"⊗("y"⊗"z")⊗"w"
