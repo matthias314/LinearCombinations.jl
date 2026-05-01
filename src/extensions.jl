@@ -835,6 +835,31 @@ The module $(@__MODULE__) only defines the linear extension of `coprod`, but no 
 except for tensors.
 
 See also [`coprod(t::AbstractTensor)`](@ref).
+
+# Example
+
+```jldoctest
+julia> import LinearCombinations: coprod
+
+julia> coprod(s::String) = Linear(Tensor(s[1:k], s[k+1:end]) => 1 for k in 0:length(s))
+
+julia> s = "ab";
+
+julia> coprod(s)
+Linear{Tensor{Tuple{String, String}}, Int64} with 3 terms:
+"ab"⊗""+""⊗"ab"+"a"⊗"b"
+
+julia> p = s |> coprod |> Tensor(coprod, identity) |> flatten
+Linear{Tensor{Tuple{String, String, String}}, Int64} with 6 terms:
+"a"⊗""⊗"b"+""⊗""⊗"ab"+"a"⊗"b"⊗""+""⊗"a"⊗"b"+""⊗"ab"⊗""+"ab"⊗""⊗""
+
+julia> q = s |> coprod |> Tensor(identity, coprod) |> flatten
+Linear{Tensor{Tuple{String, String, String}}, Int64} with 6 terms:
+"a"⊗""⊗"b"+""⊗""⊗"ab"+"a"⊗"b"⊗""+""⊗"a"⊗"b"+""⊗"ab"⊗""+"ab"⊗""⊗""
+
+julia> p == q  # coproduct is coassociative
+true
+```
 """
 function coprod end
 
