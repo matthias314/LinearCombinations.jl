@@ -226,11 +226,14 @@ end
 # @multilinear_noesc tensor Tensor{Tuple{TT...}}
 
 """
-    tensor(xs...) -> Linear{Tensor}
-    x1 ⊗ x2 ⊗ ... -> Linear{Tensor}
+    x ⊗ y -> Linear{<:Tensor}
+    ⊗(xs...) -> Linear{<:Tensor}
+    tensor(xs...) -> Linear{<:Tensor}
 
-`tensor` is the multilinear extension of `Tensor`. `⊗` is a synomym for `tensor`.
-Note that `tensor` always returns a linear combination.
+`tensor` is the multilinear extension of `Tensor`. The `⊗` operator is a synomym
+for `tensor`. Note that `tensor` always returns a linear combination.
+Also remember that `⊗` is not associative in Julia, unlike `*`. Writing tensors
+with more than two factors in infix notation therefore produces nested tensors.
 
 See also [`Tensor`](@ref), [`@multilinear`](@ref)
 
@@ -249,13 +252,20 @@ julia> tensor(a, "w")
 Linear{Tensor{Tuple{Char, String}}, Int64} with 2 terms:
 'x'⊗"w"+2*'y'⊗"w"
 
-julia> tensor(a, b)
+julia> a ⊗ b
 Linear{Tensor{Tuple{Char, String}}, Int64} with 4 terms:
 3*'x'⊗"w"-'x'⊗"z"-2*'y'⊗"z"+6*'y'⊗"w"
 
 julia> tensor('x', b, a; coefftype = Float64)
 Linear{Tensor{Tuple{Char, String, Char}}, Float64} with 4 terms:
 6.0*'x'⊗"w"⊗'y'+3.0*'x'⊗"w"⊗'x'-2.0*'x'⊗"z"⊗'y'-'x'⊗"z"⊗'x'
+
+julia> 'x' ⊗ b ⊗ a
+Linear{Tensor{Tuple{Tensor{Tuple{Char, String}}, Char}}, Int64} with 4 terms:
+3*('x'⊗"w")⊗'x'-('x'⊗"z")⊗'x'-2*('x'⊗"z")⊗'y'+6*('x'⊗"w")⊗'y'
+
+julia> tensor('x', b, a) == 'x' ⊗ b ⊗ a
+false
 
 julia> a = tensor(); a[Tensor()]
 1
