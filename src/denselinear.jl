@@ -468,7 +468,7 @@ function matrixrepr!(f, a::AbstractMatrix{R}, b1::AbstractBasis, b0::AbstractBas
 end
 
 """
-    matrixrepr(f, b1::AbstractBasis, b0::AbstractBasis, ::Type{R})) where R
+    matrixrepr(f, b1::AbstractBasis, b0::AbstractBasis, ::Type{R}) where R
 
 Return a matrix representing the linear map `f` with respect to the bases `b0` (source)
 and `b1` (target). Coefficients have the type `R`.
