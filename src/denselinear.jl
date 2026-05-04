@@ -491,3 +491,42 @@ function matrixrepr(f, b1::AbstractBasis, b0::AbstractBasis{T}, ::Type{R}) where
     a = zeros(R, length(b1), length(b0))
     matrixrepr!(f, a, b1, b0; iszero = true)
 end
+
+# tensor with DenseLinear arguments
+
+using Base.Cartesian: @nloops, @ntuple
+
+@generated function tensor_denselinear(addto, coeff, a::Vararg{DenseLinear,N}) where N
+    quote
+        @nloops($N, i, k -> eachindex(IndexCartesian(), a[k].v),
+            begin
+                j = CartesianIndex(@ntuple $N i)
+                y = @ntuple $N k -> @inbounds a[k].v[i_k]
+                @inbounds addto.v[j] += *(coeff, y...)
+            end)
+        addto
+    end
+end
+
+function tensor(a::Vararg{DenseLinear,N};
+        coefftype = multilin_coeff_type(Tensor, a),
+        addto = begin
+            b = TensorBasis(map(basis, a)...)
+            zero(DenseLinear{eltype(b), unval(coefftype)}; basis = b)
+        end,
+        coeff = ONE,
+        kw...) where N
+    if isempty(kw) && addto isa DenseLinear && basis(addto).bases === map(basis, a)
+        tensor_denselinear(addto, coeff, a...)
+    else
+        invoke(tensor, NTuple{N,AbstractLinear}, a...; coefftype, addto, coeff, kw...)::typeof(addto)
+    end
+end
+
+function tensor(;
+        coefftype = DefaultCoefftype,
+        addto = zero(DenseLinear{Tensor{Tuple{}}, unval(coefftype)}; basis = TensorBasis()),
+        coeff = ONE,
+        kw...)
+    addmul!(addto, Tensor(), coeff)
+end

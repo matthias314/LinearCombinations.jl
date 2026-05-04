@@ -226,16 +226,20 @@ end
 # @multilinear_noesc tensor Tensor{Tuple{TT...}}
 
 """
-    x ⊗ y -> Linear{<:Tensor}
-    ⊗(xs...) -> Linear{<:Tensor}
-    tensor(xs...) -> Linear{<:Tensor}
+    x ⊗ y -> AbstractLinear{<:Tensor}
+    ⊗(xs...) -> AbstractLinear{<:Tensor}
+    tensor(xs...) -> AbstractLinear{<:Tensor}
 
 `tensor` is the multilinear extension of `Tensor`. The `⊗` operator is a synomym
-for `tensor`. Note that `tensor` always returns a linear combination.
-Also remember that `⊗` is not associative in Julia, unlike `*`. Writing tensors
+for `tensor`. Note that `tensor` always returns a linear combination. The return type
+is `DenseLinear` if all arguments are `DenseLinear`; the corresponding basis is the
+`TensorBasis` of the bases of the arguments. In all other cases the return type is
+`Linear`. This can be overriden via the `addto` keyword argument.
+
+Remember that `⊗` is not associative in Julia, unlike `*`. Writing tensors
 with more than two factors in infix notation therefore produces nested tensors.
 
-See also [`Tensor`](@ref), [`@multilinear`](@ref)
+See also [`Tensor`](@ref), [`@multilinear`](@ref), [`TensorBasis`](@ref).
 
 # Examples
 
@@ -267,8 +271,22 @@ Linear{Tensor{Tuple{Tensor{Tuple{Char, String}}, Char}}, Int64} with 4 terms:
 julia> tensor('x', b, a) == 'x' ⊗ b ⊗ a
 false
 
-julia> a = tensor(); a[Tensor()]
+julia> c = tensor(); c[Tensor()]
 1
+
+julia> d = DenseLinear(a; basis = Basis('w':'z'))
+DenseLinear{Char, Int64} with 2 terms:
+'x'+2*'y'
+
+julia> d ⊗ d
+DenseLinear{Tensor{Tuple{Char, Char}}, Int64} with 4 terms:
+'x'⊗'x'+2*'y'⊗'x'+2*'x'⊗'y'+4*'y'⊗'y'
+
+julia> d ⊗ d == a ⊗ a
+true
+
+julia> basis(d ⊗ d)
+TensorBasis(Basis('w':1:'z'), Basis('w':1:'z'))
 ```
 """
 function tensor end

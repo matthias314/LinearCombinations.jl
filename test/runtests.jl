@@ -395,7 +395,7 @@ end
     @test a === b == Linear(t => -2.0)
     @test iszero(tensor(tt...; addto = a, coeff = 2))
 
-    @test @inferred(tensor(; coeff = ONE)) isa Linear{Tensor{Tuple{}},DefaultCoefftype}
+    @test @inferred(tensor(; coeff = ONE)) isa DenseLinear{Tensor{Tuple{}},DefaultCoefftype}
 
     for R in (Int8, Int, BigInt, Float64, BigFloat), S in (Int8, Int, BigInt, Float64, BigFloat)
         a = Linear{Char,R}('x' => 1, 'y' => -2)
@@ -429,6 +429,17 @@ end
         c = @inferred tensor(t...)
         @test length(c) == 2^n
     end
+
+    B = Basis('x':'z')
+    b = DenseLinear('x' => 1, 'y' => -1; basis = B)
+    c = @inferred(tensor(b, b; coeff = 2))
+    @test c isa DenseLinear && c == tensor(a, a; coeff = 2)
+    c = @inferred tensor(b, tensor(b, b))
+    @test c isa DenseLinear && c == tensor(a, tensor(a, a))
+    c = @inferred tensor(tensor(b, b), tensor(b, b))
+    @test c isa DenseLinear && c == tensor(tensor(a, a), tensor(a, a))
+    c = @inferred tensor(b, tensor())
+    @test c isa DenseLinear && c == tensor(a, tensor())
 end
 
 import LinearCombinations: deg
