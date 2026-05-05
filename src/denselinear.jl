@@ -280,13 +280,12 @@ julia> v
 struct DenseLinear{T,R,B,A} <: AbstractLinear{T,R}
     v::A
     b::B
-    @inline function DenseLinear{T,R}(a::A; basis::B) where {T,R,N,B<:AbstractBasis{<:T,N},A<:AbstractArray{R,N}}
+    @propagate_inbounds function DenseLinear{T,R}(a::A; basis::B) where {T,R,N,B<:AbstractBasis{<:T,N},A<:AbstractArray{R,N}}
         @boundscheck axes(a) == axes(basis) || error("array and basis must have the same dimensions")
         new{T,R,B,A}(a, basis)
     end
 end
 
-# @propagate_inbounds currently has no effect
 @propagate_inbounds DenseLinear{T}(v::AbstractArray{R,N}; basis::AbstractBasis{<:T,N}) where {T,R,N} = DenseLinear{T,R}(v; basis)
 
 @propagate_inbounds DenseLinear(v::AbstractArray{R,N}; basis::AbstractBasis{T,N}) where {R,T,N} = DenseLinear{T,R}(v; basis)
