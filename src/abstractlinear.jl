@@ -484,10 +484,8 @@ DenseLinear{AbstractChar, Int64} with 1 term:
 """
 convert(::Type{L}, x; kw...) where L <: AbstractLinear = L(x => one(coefftype(L)); kw...)
 
-convert(::Type{L}, a::AbstractLinear; kw...) where L <: AbstractLinear = linear_convert(L, a; kw...)
-
-linear_convert(::Type{L}, a::L) where L <: AbstractLinear = a
-linear_convert(::Type{L}, a::AbstractLinear; kw...) where L <: AbstractLinear = L(a; kw...)
+convert(::Type{L}, a::L; kw...) where L <: AbstractLinear = a
+convert(::Type{L}, a::AbstractLinear; kw...) where L <: AbstractLinear = L(a; kw...)
 
 hashed_iter(a) = a
 # to possibly switch to an iterator (y::Hashed, c)

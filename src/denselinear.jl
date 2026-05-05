@@ -291,6 +291,14 @@ end
 
 @propagate_inbounds DenseLinear(v::AbstractArray{R,N}; basis::AbstractBasis{T,N}) where {R,T,N} = DenseLinear{T,R}(v; basis)
 
+function DenseLinear{T,R}(a::DenseLinear; basis::AbstractBasis{<:T} = basis(a)) where {T,R}
+    if a.b === basis
+        @inbounds DenseLinear{T,R}(Array{R}(a.v); basis)
+    else
+        invoke(DenseLinear{T,R}, Tuple{AbstractLinear}, a; basis)
+    end
+end
+
 change_coefftype(::Type{DenseLinear{T,R,B,V}}, ::Type{S}) where {T,R,B,V,S} = DenseLinear{T,S,B,V}
 
 typename(::Type{<:DenseLinear}) = :DenseLinear
@@ -360,6 +368,10 @@ length(a::DenseLinear) = count(!iszero, a.v)
 
 copy(a::DenseLinear{T,R}) where {T,R} = @inbounds DenseLinear{T,R}(copy(a.v); basis = a.b)
 
+function convert(::Type{L}, a::L; basis = basis(a)) where L <: DenseLinear
+    a.b === basis ? a : L(a; basis)
+end
+
 function zero!(a::DenseLinear{T,R}) where {T,R}
     fill!(a.v, zero(R))
     a
@@ -418,6 +430,10 @@ function mul!(a::DenseLinear{T,R}, c) where {T,R}
         a.v .*= c isa Sign ? c*1 : c
     end
     a
+end
+
+function *(a::DenseLinear{T}, c) where T
+    @inbounds DenseLinear{T}(c * a.v; basis = a.b)
 end
 
 function copyto!(a::DenseLinear, b::DenseLinear, c = ONE)
