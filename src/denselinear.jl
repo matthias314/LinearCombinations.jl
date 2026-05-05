@@ -418,8 +418,27 @@ function modifylinear!(op::OP, a::DenseLinear, b::DenseLinear, c = missing) wher
     a
 end
 
+function +(as::Vararg{DenseLinear,N}) where N
+    basis = as[1].b
+    if all(a -> a.b === basis, as)
+        T = promote_typejoin(map(termtype, as)...)
+        @inbounds DenseLinear{T}(+(map(a -> a.v, as)...); basis)
+    else
+        invoke(+, Tuple{Vararg{AbstractLinear,N}}, as...)
+    end
+end
+
 function -(a::DenseLinear{T,R}) where {T,R}
     has_char2(R) ? a : @inbounds DenseLinear{T,R}(-a.v; basis = a.b)
+end
+
+function -(a::DenseLinear, b::DenseLinear)
+    if a.b === b.b
+        T = promote_typejoin(termtype(a), termtype(b))
+        @inbounds DenseLinear{T}(a.v - b.v; basis = a.b)
+    else
+        invoke(-, Tuple{AbstractLinear, AbstractLinear}, a, b)
+    end
 end
 
 function mul!(a::DenseLinear{T,R}, c) where {T,R}
