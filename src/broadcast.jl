@@ -111,8 +111,7 @@ function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, Sub, <
 end
 
 function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, Add})
-    foldl(addmul!, bc.args[2:end]; init = copyto!(a, bc.args[1]))
-    # addmul!(copy(bc.args[1]), Broadcast.broadcasted(+, bc.args[2:end]...)
+    foldl(addmul!, bc.args[2:end]; init = a === bc.args[1] ? a : copyto!(a, bc.args[1]))
 end
 
 function copyto!(a::AbstractLinear, bc::Broadcasted{LinearStyle, Nothing, Sub, <:Tuple2})
