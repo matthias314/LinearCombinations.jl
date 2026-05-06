@@ -224,15 +224,15 @@ Linear1{Tensor{Tuple{String, String}}, Int64} with 1 term:
 
 julia> a = Linear("x" => 1, "yy" => 1) ⊗ Linear("z" => 1, "ww" => 1)
 Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
-"x"⊗"ww"+"yy"⊗"ww"+"yy"⊗"z"+"x"⊗"z"
+"yy"⊗"z"+"x"⊗"ww"+"x"⊗"z"+"yy"⊗"ww"
 
 julia> swap(a)
 Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
-"ww"⊗"x"+"z"⊗"yy"+"z"⊗"x"+"ww"⊗"yy"
+"ww"⊗"yy"+"z"⊗"x"+"z"⊗"yy"+"ww"⊗"x"
 
 julia> swap(a; coeff = 2)
 Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
-2*"ww"⊗"x"+2*"z"⊗"yy"+2*"z"⊗"x"+2*"ww"⊗"yy"
+2*"ww"⊗"yy"+2*"z"⊗"x"+2*"z"⊗"yy"+2*"ww"⊗"x"
 ```
 ## Examples with degrees
 
@@ -246,7 +246,7 @@ Linear1{Tensor{Tuple{String, String}}, Int64} with 1 term:
 
 julia> swap(a)   # same a as before
 Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
-"ww"⊗"x"+"z"⊗"yy"-"z"⊗"x"+"ww"⊗"yy"
+"ww"⊗"yy"-"z"⊗"x"+"z"⊗"yy"+"ww"⊗"x"
 ```
 """
 const swap = regroup(:((1,2)), :((2,1)))

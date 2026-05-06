@@ -258,15 +258,15 @@ Linear{Tensor{Tuple{Char, String}}, Int64} with 2 terms:
 
 julia> a ⊗ b
 Linear{Tensor{Tuple{Char, String}}, Int64} with 4 terms:
-3*'x'⊗"w"-'x'⊗"z"-2*'y'⊗"z"+6*'y'⊗"w"
+-'x'⊗"z"-2*'y'⊗"z"+3*'x'⊗"w"+6*'y'⊗"w"
 
 julia> tensor('x', b, a; coefftype = Float64)
 Linear{Tensor{Tuple{Char, String, Char}}, Float64} with 4 terms:
-6.0*'x'⊗"w"⊗'y'+3.0*'x'⊗"w"⊗'x'-2.0*'x'⊗"z"⊗'y'-'x'⊗"z"⊗'x'
+6.0*'x'⊗"w"⊗'y'-2.0*'x'⊗"z"⊗'y'-'x'⊗"z"⊗'x'+3.0*'x'⊗"w"⊗'x'
 
 julia> 'x' ⊗ b ⊗ a
 Linear{Tensor{Tuple{Tensor{Tuple{Char, String}}, Char}}, Int64} with 4 terms:
-3*('x'⊗"w")⊗'x'-('x'⊗"z")⊗'x'-2*('x'⊗"z")⊗'y'+6*('x'⊗"w")⊗'y'
+-('x'⊗"z")⊗'x'+3*('x'⊗"w")⊗'x'-2*('x'⊗"z")⊗'y'+6*('x'⊗"w")⊗'y'
 
 julia> tensor('x', b, a) == 'x' ⊗ b ⊗ a
 false
@@ -471,7 +471,7 @@ julia> t = Tensor("abc", "xyz")
 
 julia> coprod(t)
 Linear{Tensor{Tuple{Tensor{Tuple{String, String}}, Tensor{Tuple{String, String}}}}, Int64} with 4 terms:
-("a"⊗"xy")⊗("bc"⊗"z")-("ab"⊗"x")⊗("c"⊗"yz")+("a"⊗"x")⊗("bc"⊗"yz")+("ab"⊗"xy")⊗("c"⊗"z")
+("ab"⊗"xy")⊗("c"⊗"z")+("a"⊗"xy")⊗("bc"⊗"z")+("a"⊗"x")⊗("bc"⊗"yz")-("ab"⊗"x")⊗("c"⊗"yz")
 ```
 """
 function coprod(t::AbstractTensor; kw...)
@@ -519,15 +519,15 @@ Linear{String, Int64} with 2 terms:
 
 julia> c = tensor(a, b)
 Linear{Tensor{Tuple{Char, String}}, Int64} with 4 terms:
-3*'x'⊗"w"-'x'⊗"z"-2*'y'⊗"z"+6*'y'⊗"w"
+-'x'⊗"z"-2*'y'⊗"z"+3*'x'⊗"w"+6*'y'⊗"w"
 
 julia> swap(c)
 Linear{Tensor{Tuple{String, Char}}, Int64} with 4 terms:
--"z"⊗'x'-2*"z"⊗'y'+6*"w"⊗'y'+3*"w"⊗'x'
+-"z"⊗'x'+6*"w"⊗'y'+3*"w"⊗'x'-2*"z"⊗'y'
 
 julia> f(a, b)
 Linear{Tensor{Tuple{String, Char}}, Int64} with 4 terms:
--"z"⊗'x'-2*"z"⊗'y'+6*"w"⊗'y'+3*"w"⊗'x'
+-"z"⊗'x'+6*"w"⊗'y'+3*"w"⊗'x'-2*"z"⊗'y'
 
 julia> f(a, b; addto = swap(c), coeff = -1)
 Linear{Tensor{Tuple{String, Char}}, Int64} with 0 terms:
@@ -592,7 +592,7 @@ Linear{String, Int64} with 4 terms:
 
 julia> c = tensor(a, b)
 Linear{Tensor{Tuple{Char, String}}, Int64} with 4 terms:
-3*'x'⊗"w"-'x'⊗"z"-2*'y'⊗"z"+6*'y'⊗"w"
+-'x'⊗"z"-2*'y'⊗"z"+3*'x'⊗"w"+6*'y'⊗"w"
 
 julia> g(c)
 Linear{String, Int64} with 4 terms:
@@ -741,7 +741,7 @@ Linear{Tensor{Tuple{Char, Char}}, Int64} with 1 term:
 
 julia> h(tensor(a, b))
 Linear{Tensor{Tuple{Char, Char}}, Int64} with 4 terms:
-6*'Y'⊗'w'-2*'Y'⊗'z'+3*'X'⊗'w'-'X'⊗'z'
+-'X'⊗'z'+3*'X'⊗'w'+6*'Y'⊗'w'-2*'Y'⊗'z'
 ```
 
 ## Examples with degrees
@@ -772,11 +772,11 @@ Linear{String, Int64} with 2 terms:
 
 julia> b = tensor(a, a)
 Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
-2*"yy"⊗"x"+"x"⊗"x"+4*"yy"⊗"yy"+2*"x"⊗"yy"
+2*"yy"⊗"x"+2*"x"⊗"yy"+4*"yy"⊗"yy"+"x"⊗"x"
 
 julia> j(b)
 Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
-4*"yypp"⊗"yyqqq"+2*"yypp"⊗"xqqq"-2*"xpp"⊗"yyqqq"-"xpp"⊗"xqqq"
+-2*"xpp"⊗"yyqqq"+2*"yypp"⊗"xqqq"-"xpp"⊗"xqqq"+4*"yypp"⊗"yyqqq"
 ```
 
 ## A multilinear example
@@ -893,7 +893,7 @@ julia> t = Tensor("a", "bb", "ccc")
 
 julia> diff(t)
 Linear{Tensor{Tuple{String, String, String}}, Int64} with 3 terms:
--"a"⊗"bb"⊗"Dccc"-"a"⊗"Dbb"⊗"ccc"+"Da"⊗"bb"⊗"ccc"
+-"a"⊗"Dbb"⊗"ccc"+"Da"⊗"bb"⊗"ccc"-"a"⊗"bb"⊗"Dccc"
 ```
 """
 @linear_kw function diff(t::T;

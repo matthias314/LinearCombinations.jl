@@ -847,15 +847,15 @@ julia> s = "ab";
 
 julia> coprod(s)
 Linear{Tensor{Tuple{String, String}}, Int64} with 3 terms:
-"ab"⊗""+""⊗"ab"+"a"⊗"b"
+""⊗"ab"+"a"⊗"b"+"ab"⊗""
 
 julia> p = s |> coprod |> Tensor(coprod, identity) |> flatten
 Linear{Tensor{Tuple{String, String, String}}, Int64} with 6 terms:
-"a"⊗""⊗"b"+""⊗""⊗"ab"+"a"⊗"b"⊗""+""⊗"a"⊗"b"+""⊗"ab"⊗""+"ab"⊗""⊗""
+""⊗"ab"⊗""+""⊗"a"⊗"b"+"a"⊗"b"⊗""+""⊗""⊗"ab"+"a"⊗""⊗"b"+"ab"⊗""⊗""
 
 julia> q = s |> coprod |> Tensor(identity, coprod) |> flatten
 Linear{Tensor{Tuple{String, String, String}}, Int64} with 6 terms:
-"a"⊗""⊗"b"+""⊗""⊗"ab"+"a"⊗"b"⊗""+""⊗"a"⊗"b"+""⊗"ab"⊗""+"ab"⊗""⊗""
+""⊗"ab"⊗""+""⊗"a"⊗"b"+"a"⊗"b"⊗""+""⊗""⊗"ab"+"a"⊗""⊗"b"+"ab"⊗""⊗""
 
 julia> p == q  # coproduct is coassociative
 true
