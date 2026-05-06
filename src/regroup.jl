@@ -2,7 +2,7 @@
 # regrouping
 #
 
-export regroup, regroup_inv, Regroup, swap
+export regroup, regroup_inv, @regroup_str, @regroup_inv_str, Regroup, swap
 
 function build_dict(ex, i, v, d)
     # @show ex i v
@@ -71,10 +71,11 @@ const regroup_cache = IdDict{Any,RegroupCacheEltype}()
     $(@__MODULE__).Regroup{A, B}
 
 Applying a `Regroup` object to a Tensor or a linear combinations of tensors rearranges
-the components of the tensor. Use `regroup` to create a `Regroup` object. It is possible
-to define additional methods to apply `Regroup` objects to other arguments besides tensors.
+the components of the tensor. Use the `regroup""` string macro to create a `Regroup` object.
+It is possible to define additional methods to apply `Regroup` objects to other arguments
+besides tensors.
 
-See also [`regroup`](@ref).
+See also [`@regroup_str`](@ref).
 """
 struct Regroup{A,B} end
 
@@ -86,19 +87,19 @@ regroup_get(::Type{T}, field) where T <: Regroup = regroup_cache[T][field]
 show(io::IO, rg::Regroup{A,B}) where {A,B} = print(io, "Regroup{$A, $B}")
 
 """
-    regroup(a, b) -> Regroup
+    regroup"a -> b" -> Regroup
 
-Return a `Regroup` object that can be used to rearrange the components of tensors and
+Create a `Regroup` object that can be used to rearrange the components of tensors and
 possibly other structures.
 
-The actual rearrangement is specified by the two parameters `a` and `b`.
-Both are expression trees consisting of nested tuples of integers.
-These trees encode the structure of nested tensors, and the integers specify
+The actual rearrangement is specified by the two parameters `a` and `b`,
+which are (possibly nested) tuples of integers.
+These tuples encode the structure of nested tensors, and the integers specify
 a mapping from the components of the nested source tensor to the nested target tensor.
-The labels for `a` and `b` can in fact be of any `isbits` type instead of `Int`, but
-they must be the same for `a` and `b`.
+The labels for `a` and `b` can in fact be of any `isbits` type or `Symbol` instead of
+`Int`, but they must be the same for `a` and `b`.
 
-The return value `rg = regroup(a, b)` is a callable object. An argument `t` for `rg` must be
+The created object `rg = regroup"a -> b"` is callable. An argument `t` for `rg` must be
 a nested tensor of the same shape as the `a` tree, and the return value is a `Tensor` of the same
 shape as `b`. The components of the nested tensor `t` are permuted according to the labels.
 
@@ -110,14 +111,14 @@ Moreover, `rg` is linear and can be called with linear combinations of tensors.
 
 Note that for each `Regroup` element `rg`, Julia generates separate, efficient code for computing `rg(t)`.
 
-See also [`swap`](@ref), [`regroup_inv`](@ref), [`Regroup`](@ref), [`$(@__MODULE__).DefaultCoefftype`](@ref).
+See also [`swap`](@ref), [`@regroup_inv_str`](@ref), [`Regroup`](@ref), [`$(@__MODULE__).DefaultCoefftype`](@ref).
 
 # Examples
 
 # Example without degrees
 
 ```jldoctest regroup
-julia> rg = regroup(:( (1, (2, 3), 4) ), :( ((3, 1), (4, 2)) ))
+julia> rg = regroup"(1, (2, 3), 4) -> ((3, 1), (4, 2))"
 Regroup{(1, (2, 3), 4), ((3, 1), (4, 2))}
 
 julia> t = Tensor("x", Tensor("y", "z"), "w")
@@ -139,6 +140,23 @@ Linear1{Tensor{Tuple{Tensor{Tuple{String, String}}, Tensor{Tuple{String, String}
 -("z"⊗"x")⊗("w"⊗"y")
 ```
 """
+macro regroup_str(s)
+    ex = Meta.parse(s)
+    Meta.isexpr(ex, :(->), 2) || error("invalid format")
+    regroup(ex.args[1], ex.args[2].args[2])
+end
+
+"""
+    regroup(a, b) -> Regroup
+
+Return a `Regroup` object that can be used to rearrange the components of tensors and
+possibly other structures.
+
+!!! warning
+    `regroup` is deprecated. Use the `regroup""` string macro instead.
+
+See [`@regroup_str`](@ref).
+"""
 function regroup(a, b)
     aa, bb, data = regroup_tuples_data(a, b)
     aa isa Tuple || error("first expression must be a tuple")
@@ -154,13 +172,30 @@ deg(::Regroup) = Zero()
 keeps_filtered(::Regroup, ::Type) = true
 
 """
-    regroup_inv(a, b) -> Tuple{Regroup,Regroup}
+    regroup_inv(a, b) -> Tuple{Regroup, Regroup}
 
 Return the tuple `(regroup(a, b), regroup(b, a))`.
 
-See also [`regroup`](@ref).
+!!! warning
+    `regroup_inv` is deprecated. Use the `regroup_inv""` string macro instead.
+
+See [`@regroup_inv_str`](@ref).
 """
 regroup_inv(a, b) = (regroup(a, b), regroup(b, a))
+
+"""
+    regroup_inv"a -> b" -> Tuple{Regroup, Regroup}
+
+Create the tuple `(regroup"a -> b", regroup"b -> a")` containing the `Regroup`
+objects for transformations in both directions.
+
+See also [`@regroup_str`](@ref).
+"""
+macro regroup_inv_str(s)
+    ex = Meta.parse(s)
+    Meta.isexpr(ex, :(->), 2) || error("invalid format")
+    regroup_inv(ex.args[1], ex.args[2].args[2])
+end
 
 """
     swap(t::AbstractTensor{Tuple{T1,T2}}) where {T1,T2} -> AbstractLinear{Tensor{Tuple{T2,T1}}}

@@ -477,6 +477,14 @@ end
     rg1 = regroup(:((1,(2,3))), :(3,(1,2)))
     rg2 = regroup(:(('a',('b','c'))), :('c',('a','b')))
     @test rg1 == rg2
+
+    rg3 = regroup"(1,(2,3)) -> (3,(1,2))"
+    @test rg1 == rg3
+
+    rg1i = regroup_inv(:((1,(2,3))), :(3,(1,2)))
+    rg2i = regroup(:((1,(2,3))), :(3,(1,2))), regroup(:(3,(1,2)), :((1,(2,3))))
+    rg3i = regroup_inv"(1,(2,3)) -> (3,(1,2))"
+    @test rg1i == rg2i == rg3i
 end
 
 @testset "regroup tensor" begin

@@ -23,6 +23,8 @@ LinearCombinations.cat
 flatten
 swap
 Regroup
+@regroup_str
+@regroup_inv_str
 regroup
 regroup_inv
 Base.transpose
