@@ -841,7 +841,7 @@ See also [`coprod(t::AbstractTensor)`](@ref).
 ```jldoctest
 julia> import LinearCombinations: coprod
 
-julia> coprod(s::String) = Linear(Tensor(s[1:k], s[k+1:end]) => 1 for k in 0:length(s))
+julia> coprod(s::String) = Linear(Tensor(s[1:k], s[k+1:end]) => 1 for k in 0:length(s));
 
 julia> s = "ab";
 

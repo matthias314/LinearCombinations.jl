@@ -507,7 +507,7 @@ See also [`Tensor`](@ref), [`tensor`](@ref), [`TensorSplat`](@ref), [`@linear`](
 We use [`swap`](@ref) as an example of a function acting on tensors.
 ```jldoctest
 julia> const f = TensorSlurp(swap)
-TensorSlurp(Regroup{(1, 2),(2, 1)})
+TensorSlurp(Regroup{(1, 2), (2, 1)})
 
 julia> a = Linear('x' => 1, 'y' => 2)
 Linear{Char, Int64} with 2 terms:

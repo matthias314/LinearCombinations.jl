@@ -246,7 +246,7 @@ DenseLinear{Char, Int64} with 2 terms:
 -'x'+3*'z'
 
 julia> a + b
-Linear{Char, Int64} with 2 terms:
+DenseLinear{Char, Int64} with 2 terms:
 2*'y'+3*'z'
 
 julia> c = DenseLinear('a' => 5; basis = Basis('a':'c'))
