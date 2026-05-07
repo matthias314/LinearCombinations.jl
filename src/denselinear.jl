@@ -52,9 +52,10 @@ getindex(b::AbstractBasis{T,N}, ii::Vararg{Int,N}) where {T,N} = error_missing(t
 
 export Basis
 
-struct Basis{T,N,V<:AbstractArray{T,N}} <: AbstractBasis{T,N}
-    list::V
-    invlist::Dict{T,CartesianIndex{N}}
+mutable struct Basis{T,N,V<:AbstractArray{T,N}} <: AbstractBasis{T,N}
+# with `mutable` we only need to store/compare pointers for `DenseLinear` elements
+    const list::V
+    const invlist::Dict{T,CartesianIndex{N}}
 end
 
 function Basis(list::AbstractArray{T,N}) where {T,N}
