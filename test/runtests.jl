@@ -376,7 +376,7 @@ end
     @test t == @inferred Tensor(tt...)
     @test @inferred(Tuple(t)) == tt
     @test Tuple(x for x in t) == tt
-
+    @test fieldtypes(typeof(t)) == fieldtypes(typeof(Tuple(t)))
 
     @test @inferred(hash(t)) isa UInt
     t2 = Tensor('x', "y", [1,2])

@@ -18,6 +18,7 @@ tensor
 ## Manipulating tensors
 
 ```@docs
+Base.fieldtypes
 Base.Tuple(::AbstractTensor)
 LinearCombinations.cat
 flatten

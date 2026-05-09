@@ -16,6 +16,19 @@ abstract type AbstractTensor{T<:Tuple} end
 (::Type{T})(x...) where T <: AbstractTensor = T(x)
 
 """
+    fieldtypes(::Type{T}) where T <:AbstractTensor -> Tuple
+
+Return the types of the components of `T` as a tuple.
+
+# Example
+```jldoctest
+julia> fieldtypes(Tensor{Tuple{Char, String}})
+(Char, String)
+```
+"""
+Base.fieldtypes(::Type{<:AbstractTensor{T}}) where T <: Tuple = fieldtypes(T)
+
+"""
     Tuple(t::AbstractTensor{T}) -> T <: Tuple
 
 Return the tuple of components of `t`.
