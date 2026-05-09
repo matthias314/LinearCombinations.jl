@@ -2,11 +2,15 @@
 # return type and element type
 #
 
-# using ReturnType: ReturnType, has_method
-
-# import Base: promote_op as return_type
-
-return_type(f, types...) = Core.Compiler.return_type(f, Tuple{types...})
+@inline function return_type(f::F, types...; kw...) where F
+    if isempty(kw)
+        Core.Compiler.return_type(f, Tuple{types...})
+    else
+        kwtypes = values(NamedTuple(kw))
+        alltypes = Tuple{NamedTuple{keys(kw), Tuple{kwtypes...}}, F, types...}
+        Core.Compiler.return_type(Core.kwcall, alltypes)
+    end
+end
 
 element_type(itr) = eltype(itr)
 element_type(g::Base.Generator) = return_type(g.f, element_type(g.iter))
