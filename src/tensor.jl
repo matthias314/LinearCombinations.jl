@@ -7,9 +7,11 @@ export AbstractTensor
 """
     AbstractTensor{T<:Tuple}
 
-The supertype of all tensor types. Currently the only subtype is `Tensor`.
+The supertype of all tensor types. The most important subtype is `Tensor`.
+There are also [twisted tensors](@ref sec-twisted).
 
-See [`Tensor`](@ref), [`tensor`](@ref), [`Tuple(t::AbstractTensor)`](@ref).
+See [`Tensor`](@ref), [`tensor`](@ref),
+[`LeftTwistedTensor`](@ref), [`RightTwistedTensor`](@ref).
 """
 abstract type AbstractTensor{T<:Tuple} end
 
@@ -59,8 +61,6 @@ julia> map(isuppercase, Tuple(t))
 """
 Base.Tuple(t::AbstractTensor) = error_missing(typeof(t))
 
-@struct_equal_hash AbstractTensor
-
 length(t::AbstractTensor) = length(Tuple(t))
 
 firstindex(t::AbstractTensor) = 1
@@ -70,13 +70,13 @@ iterate(t::AbstractTensor, state...) = iterate(Tuple(t), state...)
 
 @propagate_inbounds getindex(t::AbstractTensor, k) = Tuple(t)[k]
 
-function show(io::IO, ::MIME"text/plain", t::AbstractTensor)
+function show(io::IO, ::MIME"text/plain", t::T) where T <: AbstractTensor
     if isempty(t)
         print(io, "()")
     else
         get(io, :intensor, false) && print(io, '(')
         for (i, x) in enumerate(t)
-            i == 1 || print(io, '⊗')
+            i == 1 || print(io, tensor_operator(T))
             show_term(IOContext(io, :compact => true, :intensor => true), x)
         end
         get(io, :intensor, false) && print(io, ')')
@@ -115,8 +115,6 @@ revsums(::Tuple{}) = ()
 revsums(t::Tuple) = _revsums((Zero(),), t[2:end]...)
 
 linear_filter(t::AbstractTensor) = all(linear_filter, Tuple(t))
-
-keeps_filtered(::Type{<:AbstractTensor}, T::Type...) = true
 
 @linear_broadcastable AbstractTensor
 
@@ -205,7 +203,11 @@ struct Tensor{T<:Tuple} <: AbstractTensor{T}
     a::T
 end
 
+@struct_equal_hash Tensor
+
 Base.Tuple(t::Tensor) = t.a
+
+tensor_operator(::Type{<:Tensor}) = "⊗"
 
 function show(io::IO, t::Tensor{T}) where T <: Tuple
     print(io, :Tensor)
@@ -221,6 +223,9 @@ function show(io::IO, t::Tensor{T}) where T <: Tuple
     end
     print(io, ')')
 end
+
+keeps_filtered(::Type{<:Tensor}, ::Type{<:Tuple}) = true
+keeps_filtered(::ComposedFunction{<:Type{<:Tensor}, typeof(tuple)}, ::Type...) = true
 
 Tensor_func(x...) = Tensor(x)
 keeps_filtered(::typeof(Tensor_func), types...) = true

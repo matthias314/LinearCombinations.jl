@@ -45,3 +45,12 @@ deg(::AbstractTensor)
 coprod(::AbstractTensor)
 LinearCombinations.diff(::AbstractTensor)
 ```
+
+## [Twisted tensors](@id sec-twisted)
+
+```@docs
+LeftTwistedTensor
+RightTwistedTensor
+lefttwistedtensor
+righttwistedtensor
+```

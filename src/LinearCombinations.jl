@@ -30,6 +30,7 @@ include("extensions.jl")
 include("tensor.jl")
 include("denselinear.jl")
 include("regroup.jl")
+include("twisted.jl")
 
 include("helpers.jl")
 
