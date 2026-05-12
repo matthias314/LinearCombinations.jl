@@ -915,22 +915,14 @@ Linear{Tensor{Tuple{String, String, String}}, Int64} with 3 terms:
 ```
 """
 @linear_kw function diff(t::T;
-        coefftype = missing,
-        addto = missing,
+        coefftype = _coefftype(return_type(diff, T)),
+        addto = zero(change_coefftype(return_type(diff, T), coefftype)),
         coeff = ONE,
         is_filtered::Bool = false,
         sizehint::Bool = true) where T <: AbstractTensor
-    x = Tuple(t)
-    isempty(x) && return zero(Linear{T,DefaultCoefftype})
 
-    if addto !== missing
-        R = _coefftype(addto)
-    elseif coefftype !== missing
-        R = unval(coefftype)
-    else
-        R = missing
-    end
-    kwc = has_char2(R) ? (; coefftype = R) : (;)
+    x = Tuple(t)
+    kwc = has_char2(coefftype) ? (; coefftype) : (;)
 
     dx = map(x) do y
         Y = typeof(y)
@@ -941,17 +933,23 @@ Linear{Tensor{Tuple{String, String, String}}, Int64} with 3 terms:
         diff(y; kwd...)
     end
 
-    if has_char2(R)
+    if has_char2(coefftype)
         degx = ntuple(Returns(Zero()), length(x))
     else
         degx = (Zero(), map(deg, x[1:end-1])...)
     end
 
-    if addto === missing
-        if R === missing
-            R = promote_type(map(_coefftype, dx)..., map(signtype ∘ typeof, degx)...)
-        end
-        addto = zero(Linear{T,R})
-    end
     tensor_diff(addto, coeff, x, dx, degx, sizehint)
+end
+
+function return_type(::typeof(diff), ::Type{Tensor{T}}) where T <: Tuple
+    DT = map(Fix1(return_type, diff), fieldtypes(T))
+    RT = if fieldcount(T) > 1
+        map(signtype ∘ Fix1(return_type, deg), fieldtypes(T)[1:end-1])
+    else
+        ()
+    end
+    U = map(promote_typejoin, map(_termtype, DT), fieldtypes(T))
+    R = promote_type(map(_coefftype, DT)..., RT...)
+    Linear{Tensor{Tuple{U...}}, R <: Sign ? DefaultCoefftype : R}
 end
