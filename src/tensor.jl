@@ -795,16 +795,16 @@ Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
 ## A multilinear example
 
 ```jldoctest
-julia> @multilinear f; f(x::Char...) = join(x, '#');
+julia> @multilinear f; f(x::Char...) = join(x, '&');
 
 julia> @multilinear g; g(x::Char...) = join(x, '@');
 
 julia> f('a', 'p', 'x')
-"a#p#x"
+"a&p&x"
 
 julia> Tensor(f, g)(Tensor('a', 'b'), Tensor('p', 'q'), Tensor('x', 'y'))
 Linear{Tensor{Tuple{String, String}}, Int64} with 1 term:
-"a#p#x"⊗"b@q@y"
+"a&p&x"⊗"b@q@y"
 ```
 """
 function (tf::AbstractTensor)(ttx::Vararg{AbstractTensor,N};
