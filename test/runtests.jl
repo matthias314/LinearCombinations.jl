@@ -1,6 +1,6 @@
 using LinearCombinations, Test
 
-using LinearCombinations: Sign, Zero, ONE, unval, DefaultCoefftype
+using LinearCombinations: Sign, Zero, ONE, unval, DefaultCoefftype, return_type
 using StructEqualHash
 
 @testset "Sign" begin
@@ -268,6 +268,12 @@ end
     end
 end
 
+module LinearTest
+
+using StructEqualHash
+using ..LinearCombinations
+using ..LinearCombinations: unval, ONE
+
 f(x) = x * x
 @linear f
 
@@ -291,7 +297,11 @@ end
 
 @linear ::H
 
+end
+
 @testset "@linear" begin
+    using .LinearTest: f, g, H
+
     for R in (Int8, Int, Float64, BigFloat)
         a = Linear{Char,R}('x' => 1, 'y' => 2, 'z' => 3)
         b = Linear("xx" => 1, "yy" => 2, "zz" => 3)
@@ -332,6 +342,8 @@ end
 end
 
 @testset "LinearExtension" begin
+    using .LinearTest: f, g, H
+
     h = LinearExtension(x -> x*x)
     j = LinearExtension(g)
     for R in (Int8, Int, Float64, BigFloat)
@@ -365,7 +377,47 @@ end
     end
 end
 
+module MultilinearTest
+
+using ..LinearCombinations
+
+@multilinear f
+f(x::Char, y::Char) = x*y
+
+@multilinear g f
+
+struct A end
+@multilinear ::A
+(::A)(x::Char, y::Char) = x*y
+
+struct B end
+@multilinear b::B
+(::B)(x::Char, y::Char) = x*y
+
+struct C end
+@multilinear ::C f
+
+struct D{T} f::T end
+@multilinear d::D d.f
+
+end
+
 @testset "@multilinear" begin
+    import .MultilinearTest as M
+
+    for f in [M.f, M.A(), M.B()]
+        @test String == @inferred return_type(f, Char, Char)
+        @test Linear{String,DefaultCoefftype} == @inferred return_type(f, Linear{Char,DefaultCoefftype}, Char)
+        @test Linear{String,BigFloat} == @inferred return_type(f, Linear{Char,BigInt}, Linear1{Char,Float32})
+        @test Linear1{String,Int8} == @inferred return_type(f, Char, Linear1{Char,Int8})
+    end
+
+    for f in [M.g, M.C(), M.D(M.f)]
+        @test Linear1{String,DefaultCoefftype} == @inferred return_type(f, Char, Char)
+        @test Linear{String,DefaultCoefftype} == @inferred return_type(f, Linear{Char,DefaultCoefftype}, Char)
+        @test Linear{String,BigFloat} == @inferred return_type(f, Linear{Char,BigInt}, Linear1{Char,Float32})
+        @test Linear1{String,Int8} == @inferred return_type(f, Char, Linear1{Char,Int8})
+    end
 end
 
 @testset "Tensor and tensor" begin

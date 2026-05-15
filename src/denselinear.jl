@@ -312,6 +312,8 @@ See also [`coordinates`](@ref).
 """
 basis(a::DenseLinear) = a.b
 
+basistype(::Type{<:DenseLinear{T,R,B}}) where {T,R,B} = B
+
 """
     coordinates(a::DenseLinear{T,R}) -> AbstractArray{R}
 
@@ -551,10 +553,10 @@ using Base.Cartesian: @nloops, @ntuple
 end
 
 function tensor(a::Vararg{DenseLinear,N};
-        coefftype = multilin_coeff_type(Tensor, a),
+        coefftype = Sign,
         addto = begin
             b = TensorBasis(map(basis, a)...)
-            zero(DenseLinear{eltype(b), unval(coefftype)}; basis = b)
+            zero(linear_return_type(tensor, unval(coefftype), map(typeof, a)...); basis = b)
         end,
         coeff = ONE,
         kw...) where N
@@ -571,4 +573,19 @@ function tensor(;
         coeff = ONE,
         kw...)
     addmul!(addto, Tensor(), coeff)
+end
+
+function return_type(::typeof(tensor), types::Type{<:DenseLinear}...)
+    U = Tensor{Tuple{map(_termtype, types)...}}
+    R = promote_type(map(_coefftype, types)...)
+    R = R <: Sign ? DefaultCoefftype : R
+
+    # basis type
+    B = map(basistype, types)
+    T = Tuple{map(eltype, B)...}
+    U = isconcretetype(T) ? Tensor{T} : Tensor{<:T}
+    N = sum(ndims, B; init = 0)
+    A = Array{R,N}
+
+    DenseLinear{U,R,TensorBasis{U,N,Tuple{B...}},A}
 end

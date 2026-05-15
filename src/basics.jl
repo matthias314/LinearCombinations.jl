@@ -2,14 +2,22 @@
 # return type and element type
 #
 
-@inline function return_type(f::F, types...; kw...) where F
-    if isempty(kw)
+module ReturnType
+
+@inline function return_type(f::F, types::Type...; kw...) where F
+    kw = NamedTuple(kw)
+    kwtypes = values(kw)
+    T = if isempty(kw)
         Core.Compiler.return_type(f, Tuple{types...})
     else
-        kwtypes = values(NamedTuple(kw))
         alltypes = Tuple{NamedTuple{keys(kw), Tuple{kwtypes...}}, F, types...}
         Core.Compiler.return_type(Core.kwcall, alltypes)
     end
+    all(isconcretetype, types) && all(isconcretetype, kwtypes) && !isconcretetype(T) &&
+        @debug "inferred return type not concrete" T, f, types, kw
+    T
+end
+
 end
 
 element_type(itr) = eltype(itr)
@@ -153,6 +161,11 @@ isodd(::Zero) = false
 *(::Zero, ::Zero) = Zero()
 
 promote_rule(::Type{Zero}, ::Type{R}) where R = R
+
+promote_type_product(::Type{R}, ::Type{S}) where {R,S} = promote_type(R, S)
+promote_type_product(::Type{Zero}, ::Type{R}) where R = Zero
+promote_type_product(::Type{R}, ::Type{Zero}) where R = Zero
+promote_type_product(::Type{Zero}, ::Type{Zero}) = Zero
 
 convert(::Type{R}, ::Zero) where R <: Number = zero(R)
     # added "<: Number" to reduce invalidations

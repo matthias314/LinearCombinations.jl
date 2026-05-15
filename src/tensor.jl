@@ -225,23 +225,6 @@ function show(io::IO, t::Tensor{T}) where T <: Tuple
 end
 
 keeps_filtered(::Type{<:Tensor}, ::Type{<:Tuple}) = true
-keeps_filtered(::ComposedFunction{<:Type{<:Tensor}, typeof(tuple)}, ::Type...) = true
-
-Tensor_func(x...) = Tensor(x)
-keeps_filtered(::typeof(Tensor_func), types...) = true
-
-Base.@assume_effects :total function return_type(::typeof(Tensor_func), types...)
-    UU = map(_termtype, types)
-    if all(isconcretetype, UU)
-        Tensor{Tuple{UU...}}
-    else
-        Tensor{T} where T<:Tuple{UU...}
-    end
-end
-
-# @multilinear tensor Tensor_func
-@multilinear_noesc tensor Tensor
-# @multilinear_noesc tensor Tensor{Tuple{TT...}}
 
 """
     x ⊗ y -> AbstractLinear{<:Tensor}
@@ -312,19 +295,13 @@ function tensor end
 const ⊗ = tensor
 # or define it the other way around?
 
-Base.@assume_effects :total function tensor_return_type(T...)
-    # T = map(typeof, x)
-    RR = map(_coefftype, T)
-    UU = map(_termtype, T)
-    R = promote_type(Sign, RR...)
-    if R == Sign
-        R = DefaultCoefftype
-    end
-    if all(isconcretetype, UU)
-        Linear{Tensor{Tuple{UU...}},R}
-    else
-        Linear{Tensor{T} where T<:Tuple{UU...},R}
-    end
+@multilinear tensor Tensor∘tuple
+
+keeps_filtered(::ComposedFunction{<:Type{<:Tensor}, typeof(tuple)}, ::Type...) = true
+
+function return_type(::ComposedFunction{<:Type{<:Tensor}, typeof(tuple)}, types::Type...)
+    @assert !any(T -> T <: AbstractLinear, types)
+    Tensor{Tuple{types...}}
 end
 
 # transpose of tensors
@@ -560,13 +537,7 @@ end
 
 show(io::IO, g::TensorSlurp) = (print(io, "TensorSlurp("); show(io, g.f); print(io, ')'))
 
-# @multilinear g::TensorSlurp (x...; kw...) -> g.f(Tensor(x); kw...)
-@multilinear g::TensorSlurp TermComposedFunction(g.f, Tensor_func)
-# @multilinear_noesc g::TensorSlurp LinearComposedFunction(g.f, Tensor{Tuple{TT...}})
-
-hastrait(g::TensorSlurp, prop::Val, T::Type...) = hastrait(g.f, prop, Tensor{Tuple{T...}})
-
-keeps_filtered(g::TensorSlurp, T::Type...) = keeps_filtered(g.f, Tensor{Tuple{T...}})
+@multilinear g::TensorSlurp TermComposedFunction(g.f, Tensor∘tuple)
 
 deg(g::TensorSlurp) = deg(g.f)
 
@@ -812,12 +783,12 @@ Linear{Tensor{Tuple{String, String}}, Int64} with 1 term:
 "a&p&x"⊗"b@q@y"
 ```
 """
-function (tf::AbstractTensor)(ttx::Vararg{AbstractTensor,N};
+function (tf::AbstractTensor{<:Tuple{Vararg{Any,N}}})(ttx::Vararg{AbstractTensor{<:Tuple{Vararg{Any,N}}},M};
+        coefftype = Sign,
+        addto = zero(linear_return_type(tf, unval(coefftype), map(typeof, ttx)...)),
         coeff = ONE,
         is_filtered::Bool = false,
-        kw...) where N
-    n = length(tf)
-    all(==(n), map(length, ttx)) || error("all tensor arguments of $tf must have $n components")
+        kw...) where {N,M}
 
     tfx = map(Tuple(tf), map(Tuple, ttx)...) do f, x...
         InnerKw(f; is_filtered, kw...)(x...)
@@ -834,31 +805,42 @@ function (tf::AbstractTensor)(ttx::Vararg{AbstractTensor,N};
         m = Zero()
     end
 
-    if haskey(kw, :addto) || haskey(kw, :coefftype)
-        tensor(tfx...; coeff, is_filtered = tensor_if, kw...)
-    else
-        R = promote_type(map(_coefftype, tfx)..., signtype(typeof(m)))
-        if R === Sign
-            R = DefaultCoefftype
-        end
-        tensor(tfx...; coefftype = Val(R), coeff, is_filtered = tensor_if, kw...)
-    end
+    tensor(tfx...; addto, coeff, is_filtered = tensor_if, kw...)
 end
 
 hastrait(::AbstractTensor, ::Val, types...) = true
 
-#=
-# TODO: this poses problems with inference
-function return_type(g::TensorMap, ::Type{T}) where T <: Tensor
-    types = T.parameters[1].parameters
-    length(types) == length(g) || error("wrong number of tensor components")
-    TT = ntuple(k -> return_type(g[k], types[k]), length(g))
-    U = Tensor{Tuple{map(_termtype, TT)...}}
-    S = promote_type(Sign, map(_coefftype, TT)...)
-    @show TT U S
-    Linear{U,S}
+function return_type(tf::AbstractTensor{<:Tuple{Vararg{Any,N}}}, types::Vararg{Type{<:AbstractTensor{<:Tuple{Vararg{Any,N}}}},M}) where {N,M}
+    tt = map(fieldtypes, types)
+
+    rt = ntuple(Val(N)) do i
+        return_type(tf[i], map(T -> T[i], tt)...)
+    end
+
+    # compute sign type
+    S = if N == 0
+        Sign
+    else
+        st = map(Fix1(map, Fix1(return_type, deg)), tt)
+        ft = map(Fix1(return_type, deg), fieldtypes(typeof(tf)))
+        fst = (ft, st...)
+        fst4 = ntuple(Val(N-1)) do i
+            fst3 = ntuple(Val(M)) do j
+                fst2 = ntuple(j) do k
+                    fst1 = map(Fix1(promote_type_product, fst[j+1][i]), fst[k][i+1:end])
+                    promote_type(fst1...)
+                end
+                promote_type(fst2...)
+            end
+            promote_type(fst3...)
+        end
+        signtype(promote_type(fst4...))
+    end
+
+    U = Tensor{Tuple{map(_termtype, rt)...}}
+    R = promote_type(S, map(_coefftype, rt)...)
+    Linear{U, R <: Sign ? DefaultCoefftype : R}
 end
-=#
 
 # differential
 
@@ -915,14 +897,14 @@ Linear{Tensor{Tuple{String, String, String}}, Int64} with 3 terms:
 ```
 """
 @linear_kw function diff(t::T;
-        coefftype = _coefftype(return_type(diff, T)),
-        addto = zero(change_coefftype(return_type(diff, T), coefftype)),
+        coefftype = Sign,
+        addto = zero(linear_return_type(diff, unval(coefftype), T)),
         coeff = ONE,
         is_filtered::Bool = false,
         sizehint::Bool = true) where T <: AbstractTensor
 
     x = Tuple(t)
-    kwc = has_char2(coefftype) ? (; coefftype) : (;)
+    kwc = has_char2(unval(coefftype)) ? (; coefftype) : (;)
 
     dx = map(x) do y
         Y = typeof(y)
@@ -933,7 +915,7 @@ Linear{Tensor{Tuple{String, String, String}}, Int64} with 3 terms:
         diff(y; kwd...)
     end
 
-    if has_char2(coefftype)
+    if has_char2(unval(coefftype))
         degx = ntuple(Returns(Zero()), length(x))
     else
         degx = (Zero(), map(deg, x[1:end-1])...)

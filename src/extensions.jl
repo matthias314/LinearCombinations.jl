@@ -2,6 +2,30 @@
 # linear extension
 #
 
+is_term_or_linear1(::Type{T}) where T = !(T <: AbstractLinear) || T <: Linear1
+
+function return_type(f::F, types::Type...) where F
+    TT = map(_termtype, types)
+    if TT == types
+        ReturnType.return_type(f, types...)
+    else
+        LU = return_type(f, TT...)
+        U = _termtype(LU)
+        R = promote_type(map(_coefftype, types)..., _coefftype(LU))
+        if all(is_term_or_linear1, types) && is_term_or_linear1(LU)
+            Linear1{U, R == Sign ? DefaultCoefftype : R}
+        else
+            Linear{U, R == Sign ? DefaultCoefftype : R}
+        end
+    end
+end
+
+function linear_return_type(f::F, coefftype::Type{R}, types::Type...) where {F,R}
+    L = return_type(f, types...)
+    @assert L <: AbstractLinear
+    coefftype <: Sign ? L : change_coefftype(L, coefftype)
+end
+
 # macros for linear extension
 
 export @linear, @linear_kw, keeps_filtered
@@ -195,16 +219,6 @@ macro linear_kw(ex)
     ex2
 end
 
-linear_extension_coeff_type(f::F, types...) where F = _coefftype(return_type(f, types...))
-
-linear_extension_term_type(f::F, ::Type{T}) where {F,T} = _termtype(return_type(f, T))
-
-function linear_extension_type(f::F, ::Type{L}, ::Type{R}) where {F,L<:AbstractLinear,R}
-    LU = return_type(f, _termtype(L))
-    U = _termtype(LU)
-    L <: Linear1 && (LU <: Linear1 || !(LU <: AbstractLinear)) ? Linear1{U,R} : Linear{U,R}
-end
-
 """
     @linear f
     @linear ::F
@@ -304,11 +318,13 @@ Linear{String, Int64} with 2 terms:
 """
 macro linear(f)
     F = Meta.isexpr(f, :(::), 1) ? Expr(:(::), :f, esc(f.args[1])) : esc(f)
+    G = Meta.isexpr(f, :(::)) ? esc(f.args[end]) : :(typeof($(esc(f))))
     quote
+        function $F end
+
         function $F(a::L;
-                coefftype = promote_type(R, linear_extension_coeff_type($F, T)),
-                # addto = zero(Linear{linear_extension_term_type($F, T), coefftype}),
-                addto = zero(linear_extension_type($F, L, unval(coefftype))),
+                coefftype = Sign,
+                addto = zero(linear_return_type($F, unval(coefftype), L)),
                 coeff = ONE,
                 sizehint::Bool = true,
                 kw...) where {T,R,L<:AbstractLinear{T,R}}
@@ -404,7 +420,7 @@ deg(g::LinearExtension) = deg(g.f)
 
 # linear extension of function evaluation
 
-(a::AbstractLinear)(x...; kw...) = multilin(Eval, a, x...; kw...)
+(a::AbstractLinear)(x...; kw...) = MultilinearExtension(Eval)(a, x...; kw...)
 
 
 #
@@ -412,15 +428,6 @@ deg(g::LinearExtension) = deg(g.f)
 #
 
 export @multilinear
-
-multilin_return_type(f::F, x::A) where {F,A} = return_type(f, map(_termtype, x)...)
-
-function multilin_coeff_type(f::F, x::A) where {F,A<:Tuple}
-    R = promote_type(_coefftype(multilin_return_type(f, x)), map(_coefftype, x)...)
-    R == Sign ? DefaultCoefftype : R
-end
-
-multilin_term_type(f::F, x::A) where {F,A<:Tuple} = _termtype(multilin_return_type(f, x))
 
 using Base.Cartesian
 using Base.Cartesian: inlineanonymous
@@ -445,13 +452,10 @@ end
 _length(x) = 1
 _length(a::AbstractLinear) = length(a)
 
-@generated function multilin(f::F, a::Vararg{Any,N};
-        coefftype = multilin_coeff_type(f, a),
-        addto = zero(Linear{multilin_term_type(f, a), unval(coefftype)}),
-            # TODO: we want coefftype::Type{R} and use "R" here, see julia #49367
+@generated function multilin(f::F, addto, a::Vararg{Any,N};
         coeff = ONE,
-        is_filtered = false,
-        sizehint = true,
+        is_filtered::Bool = false,
+        sizehint::Bool = true,
         kw...) where {F,N}
     N = length(a)
     TS = map(_termtype, a)
@@ -582,75 +586,47 @@ Linear{String, Float64} with 4 terms:
 """
 macro multilinear(f, f0 = f)
     F = Meta.isexpr(f, :(::), 1) ? Expr(:(::), :f, esc(f.args[1])) : esc(f)
+    FT = Meta.isexpr(f, :(::)) ? F : :(f::typeof($F))
     F0 = f0 == f ? F : esc(f0)
-    if f0 == f
-        traits = quote end
-    else
-        FT = isexpr(f, :(::)) ? esc(f.args[2]) : :(typeof($F))
-        traits = quote
-            $(@__MODULE__).hastrait(::$FT, ::Val, types...) = true
-        end
-    end
-    # TODO: does @propagate_inbounds make sense?
-    quote
-        @propagate_inbounds $F(x...; kw...) = multilin($F0, x...; kw...)
-        $traits
-    end
-end
 
-macro multilinear_noesc(f, f0 = f)
-    F = esc(f)
-    F0 = f0  # esc(f0)
     if f0 == f
         traits = quote end
     else
-        FT = isexpr(f, :(::)) ? esc(f.args[2]) : :(typeof($F))
         traits = quote
-            $(@__MODULE__).hastrait(::$FT, ::Val, types...) = true
+            $(@__MODULE__).hastrait($FT, ::Val, types::Type...) = true
+            $(@__MODULE__).keeps_filtered($FT, types::Type...) = keeps_filtered($F0, types...)
         end
     end
-    quote
-        # TODO: does @propagate_inbounds make sense?
-        @propagate_inbounds @generated function $F($(esc(:a))...;
-                coefftype = multilin_coeff_type($F0, a),
-                addto = zero(Linear{multilin_term_type($F0, a), unval(coefftype)}),
-                    # TODO: we want coefftype::Type{R} and use "R" here, see julia #49367
-                coeff = ONE,
-                is_filtered = false,
-                sizehint = true,
-                $(esc(:kw))...)
-            N = length(a)
-            TT = map(_termtype, a)
-            quote
-                # TT = $TT
-                is_filtered || all($linear_filter, a) || return addto
-                has_ac = $has_addto_coeff($$F0, $TT...)
-                fkw = kw
-                if $has_isfiltered($$F0, $TT...)
-                    fkw = push_kw(fkw; is_filtered)
+
+    rt_ex = if f != f0
+        quote
+            function $(@__MODULE__).return_type($FT, types::Type...)
+                if any(T -> T <: AbstractLinear, types)
+                    invoke(return_type, Tuple{Any,Vararg{Type}}, $F0, types...)
+                else
+                    LU = return_type($F0, types...)
+                    LU <: AbstractLinear ? LU : Linear1{LU,DefaultCoefftype}
                 end
-                if $has_sizehint($$F0, $TT...)
-                    fkw = push_kw(fkw; sizehint)
-                elseif sizehint # && !(return_type(f, $TT...) <: AbstractLinear)
-                    l = prod($_length, a; init = 1)
-                    sizehint!(addto, length(addto)+l)
-                end
-                Base.Cartesian.@nexprs(1, i -> cc_{$N+i} = coeff)  # initialize cc_{N+1}
-                Base.Cartesian.@nloops($N, xc, i -> a[i] isa $AbstractLinear ? a[i] : ((a[i], $ONE),), i -> begin
-                    x_i, c_i = xc_i
-                    cc_i = c_i*cc_{i+1}
-                end, begin
-                    if has_ac   # || return_type(f, $TT...) <: AbstractLinear   # for testing
-                        $$(@__MODULE__).@ncallkw($N, $$F0, (addto, coeff = cc_1, fkw...), x)
-                    else
-                        $addmul!(addto, $$(@__MODULE__).@ncallkw($N, $$F0, fkw, x), cc_1; is_filtered = $keeps_filtered($$F0, $TT...))
-                    end
-                end)
-                addto
             end
         end
+    else
+        :()
+    end
+
+    # TODO: does @propagate_inbounds make sense?
+    quote
+        function $F end
+
+        $rt_ex
 
         $traits
+
+        @propagate_inbounds function $F(xs...;
+                coefftype = Sign,
+                addto = zero(linear_return_type($F, unval(coefftype), map(typeof, xs)...)),
+                kw...)
+            multilin($F0, addto, xs...; kw...)
+        end
     end
 end
 
@@ -691,8 +667,6 @@ show(io::IO, g::MultilinearExtension) = print(io, g.name)
 
 @multilinear g::MultilinearExtension g.f
 
-# hastrait(g::MultilinearExtension, trait::Val, types...) = hastrait(g.f, trait, types...)
-
 deg(g::MultilinearExtension) = deg(g.f)
 
 #
@@ -701,11 +675,11 @@ deg(g::MultilinearExtension) = deg(g.f)
 
 abstract type AbstractComposedFunction end
 
-keeps_filtered(f::AbstractComposedFunction, types...) = keeps_filtered(f.outer, return_type(f.inner, types...))
+keeps_filtered(f::AbstractComposedFunction, types::Type...) = keeps_filtered(f.outer, return_type(f.inner, types...))
 
 deg(f::AbstractComposedFunction) = deg(f.outer) + deg(f.inner)
 
-return_type(f::AbstractComposedFunction, types...) = return_type(f.outer, return_type(f.inner, types...))
+return_type(f::AbstractComposedFunction, types::Type...) = return_type(f.outer, return_type(f.inner, types...))
 
 struct LinearComposedFunction{O,I} <: AbstractComposedFunction
     outer::O
