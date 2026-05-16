@@ -23,6 +23,25 @@ keeps_filtered(f::ShowArgs, types...) = keeps_filtered(f.f, types...)
 
 deg(f::ShowArgs) = deg(f.f)
 
+# ShowFilter
+
+export ShowFilter
+
+import LinearCombinations: linear_filter
+using StructEqualHash
+
+struct ShowFilter{T} x::T end
+
+@struct_equal_hash ShowFilter
+
+Base.convert(::Type{S}, x) where S <: ShowFilter = S(x)
+
+function linear_filter(sf::ShowFilter)
+    b = linear_filter(sf.x)
+    println("linear_filter: $(sf.x) $b")
+    b
+end
+
 # BasisLinear
 
 export BasicLinear
