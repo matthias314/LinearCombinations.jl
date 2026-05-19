@@ -808,7 +808,7 @@ function (tf::AbstractTensor{<:Tuple{Vararg{Any,N}}})(ttx::Vararg{AbstractTensor
     tensor(tfx...; addto, coeff, is_filtered = tensor_if, kw...)
 end
 
-hastrait(::AbstractTensor, ::Val, types...) = true
+hastrait(::AbstractTensor, ::Val, types::Type...) = true
 
 function return_type(tf::AbstractTensor{<:Tuple{Vararg{Any,N}}}, types::Vararg{Type{<:AbstractTensor{<:Tuple{Vararg{Any,N}}}},M}) where {N,M}
     tt = map(fieldtypes, types)

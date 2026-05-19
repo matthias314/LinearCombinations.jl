@@ -32,7 +32,7 @@ export @linear, @linear_kw, keeps_filtered
 
 using MacroTools
 
-Base.@nospecializeinfer hastrait(f, trait::Val, @nospecialize(types...)) = false
+Base.@nospecializeinfer hastrait(f, trait::Val, @nospecialize(types::Type...)) = false
 
 """
     $(@__MODULE__).has_coefftype(f, types...) -> Bool
@@ -47,7 +47,7 @@ See also
 [`$(@__MODULE__).has_isfiltered`](@ref),
 [`$(@__MODULE__).has_sizehint`](@ref).
 """
-has_coefftype(f, types...) = hastrait(f, Val(:coefftype), types...)
+has_coefftype(f, types::Type...) = hastrait(f, Val(:coefftype), types...)
 
 """
     $(@__MODULE__).has_addto_coeff(f, types...) -> Bool
@@ -62,7 +62,7 @@ See also
 [`$(@__MODULE__).has_isfiltered`](@ref),
 [`$(@__MODULE__).has_sizehint`](@ref).
 """
-has_addto_coeff(f, types...) = hastrait(f, Val(:addto_coeff), types...)
+has_addto_coeff(f, types::Type...) = hastrait(f, Val(:addto_coeff), types...)
 
 """
     $(@__MODULE__).has_isfiltered(f, types...) -> Bool
@@ -81,7 +81,7 @@ See also
 [`$(@__MODULE__).has_sizehint`](@ref),
 [`keeps_filtered`](@ref).
 """
-has_isfiltered(f, types...) = hastrait(f, Val(:is_filtered), types...)
+has_isfiltered(f, types::Type...) = hastrait(f, Val(:is_filtered), types...)
 
 """
     $(@__MODULE__).has_sizehint(f, types...) -> Bool
@@ -96,7 +96,7 @@ See also
 [`$(@__MODULE__).has_addto_coeff`](@ref),
 [`$(@__MODULE__).has_isfiltered`](@ref),
 """
-has_sizehint(f, types...) = hastrait(f, Val(:sizehint), types...)
+has_sizehint(f, types::Type...) = hastrait(f, Val(:sizehint), types...)
 
 """
     keeps_filtered(f, types...) -> Bool
@@ -111,8 +111,8 @@ The setting for `keeps_filtered` doesn't matter in this case.
 
 See also [`$(@__MODULE__).linear_filter`](@ref).
 """
-keeps_filtered(f, types...) = false
-keeps_filtered(::typeof(identity), type) = true
+keeps_filtered(f, ::Type...) = false
+keeps_filtered(::typeof(identity), ::Type) = true
 
 function addtraits!(ex, def::Dict, traits)
     def[:name] = :($(@__MODULE__).hastrait)
@@ -414,7 +414,7 @@ show(io::IO, g::LinearExtension) = print(io, g.name)
 
 @linear g::LinearExtension
 
-hastrait(g::LinearExtension, trait::Val, types...) = hastrait(g.f, trait, types...)
+hastrait(g::LinearExtension, trait::Val, types::Type...) = hastrait(g.f, trait, types...)
 
 deg(g::LinearExtension) = deg(g.f)
 
@@ -695,8 +695,8 @@ function (f::LinearComposedFunction)(x...; kw...)
     end
 end
 
-hastrait(f::LinearComposedFunction, trait::Val, types...) = hastrait(f.outer, trait, return_type(f.inner, types...))
-hastrait(f::LinearComposedFunction, trait::Val{:is_filtered}, types...) = hastrait(f.inner, trait, types...)
+hastrait(f::LinearComposedFunction, trait::Val, types::Type...) = hastrait(f.outer, trait, return_type(f.inner, types...))
+hastrait(f::LinearComposedFunction, trait::Val{:is_filtered}, types::Type...) = hastrait(f.inner, trait, types...)
 
 struct TermComposedFunction{O,I} <: AbstractComposedFunction
     outer::O
@@ -732,13 +732,13 @@ function (f::InnerKw)(x...)
     f.f(x...; kwi...)
 end
 
-hastrait(f::InnerKw, trait::Val, types...) = hastrait(f.f, trait, types...)
+hastrait(f::InnerKw, trait::Val, types::Type...) = hastrait(f.f, trait, types...)
 
-keeps_filtered(f::InnerKw, types...) = keeps_filtered(f.f, types...)
+keeps_filtered(f::InnerKw, types::Type...) = keeps_filtered(f.f, types...)
 
 deg(f::InnerKw) = deg(f.f)
 
-# return_type(f::InnerKw, types...) = return_type(f.f, types...)
+# return_type(f::InnerKw, types::Type...) = return_type(f.f, types...)
 
 #
 # bilinear and multilinear extension of multiplication

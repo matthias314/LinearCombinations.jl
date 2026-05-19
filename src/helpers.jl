@@ -17,9 +17,9 @@ function (f::ShowArgs)(args...; kw...)
     f.f(args...; kw...)
 end
 
-hastrait(f::ShowArgs, trait::Val, types...) = hastrait(f.f, trait, types...)
+hastrait(f::ShowArgs, trait::Val, types::Type...) = hastrait(f.f, trait, types...)
 
-keeps_filtered(f::ShowArgs, types...) = keeps_filtered(f.f, types...)
+keeps_filtered(f::ShowArgs, types::Type...) = keeps_filtered(f.f, types...)
 
 deg(f::ShowArgs) = deg(f.f)
 
