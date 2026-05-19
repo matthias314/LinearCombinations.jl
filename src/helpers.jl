@@ -42,6 +42,24 @@ function linear_filter(sf::ShowFilter)
     b
 end
 
+# ErrorFilter
+
+export ErrorFilter, FilterException
+
+struct ErrorFilter{T} x::T end
+
+@struct_equal_hash ErrorFilter
+
+deg(x::ErrorFilter) = deg(x.x)
+
+struct FilterException <: Exception end
+
+linear_filter(::ErrorFilter) = throw(FilterException())
+
+Base.:*(x::ErrorFilter, y) = ErrorFilter(x.x*y)
+Base.:*(x, y::ErrorFilter) = ErrorFilter(x*y.x)
+Base.:*(x::ErrorFilter, y::ErrorFilter) = ErrorFilter(x.x*y.x)
+
 # BasisLinear
 
 export BasicLinear
