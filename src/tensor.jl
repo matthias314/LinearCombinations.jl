@@ -379,7 +379,7 @@ Linear1{Tensor{Tuple{Tensor{Tuple{String, String}}, Tensor{Tuple{String, String}
         coefftype = missing,
         addto = missing,
         coeff = one(DefaultCoefftype),
-        is_filtered = false)
+        is_filtered::Bool = false)
     coefftype = unval(coefftype)
     tt = transpose_nosign(t)
     if addto !== missing || !has_char2(addto)
