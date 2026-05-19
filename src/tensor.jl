@@ -615,13 +615,13 @@ deg(g::TensorSplat) = deg(g.f)
 #
 
 tuple_cat() = tuple()
-tuple_cat(x) = tuple(x...)  # needed for conversion of Tensor (and ProductSimplex) to Tuple
+tuple_cat(x) = Tuple(x)  # needed for conversion of Tensor (and ProductSimplex) to Tuple
 tuple_cat(x, y, z...) = tuple_cat(tuple(x..., y...), z...)
 
 @multilinear cat
 
 """
-    cat(t::AbstractTensor...) -> Tensor
+    $(@__MODULE__).cat(t::AbstractTensor...) -> Tensor
 
 Concatenate the tensors given as arguments. This function is multilinear.
 
@@ -636,7 +636,12 @@ julia> $(@__MODULE__).cat(Tensor('x'), Tensor('y', Tensor('z', 'w')))
 """
 cat(t::AbstractTensor...) = Tensor(tuple_cat(t...))
 
-# TODO: add keeps_filtered?
+keeps_filtered(::typeof(cat), ::Type{<:AbstractTensor}...) = true
+
+function return_type(::typeof(cat), types::Type{<:AbstractTensor}...)
+    TT = tuple_cat(map(fieldtypes, types)...)
+    Tensor{Tuple{TT...}}
+end
 
 tuple_flatten(x) = (x,)
 tuple_flatten(x::AbstractTensor) = tuple_cat(map(tuple_flatten, Tuple(x))...)
