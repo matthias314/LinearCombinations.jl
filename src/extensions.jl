@@ -20,10 +20,11 @@ function return_type(f::F, types::Type...) where F
     end
 end
 
-function linear_return_type(f::F, coefftype::Type{R}, types::Type...) where {F,R}
+function linear_return_type(f::F, ::Type{R}, types::Type...) where {F,R}
     L = return_type(f, types...)
     @assert L <: AbstractLinear
-    coefftype <: Sign ? L : change_coefftype(L, coefftype)
+    S = promote_type(coefftype(L), R)
+    change_coefftype(L, S)
 end
 
 # macros for linear extension
@@ -232,7 +233,7 @@ appearing in `a`.
 The new method recognizes the following keyword arguments:
 
 * `coefftype`:
-    This optional keyword argument specifies the coefficient type of the linear combination returned
+    This optional keyword argument influences the coefficient type of the linear combination returned
     by `f(a)` if the keyword argument `addto` is not present. If `coefftype` is also not specified
     and `f(x::T)` is a term (as opposed to a linear combination), then `coefftype` is set to `R`.
     If `f(x::T) <: AbstractLinear`, say with coefficient type `S`, then `promote_type(R, S)`
