@@ -18,6 +18,8 @@ import Base: show, ==, hash, copy, copyto!, convert, promote_rule,
     length, eltype, in, iterate, sizehint!,
     firstindex, lastindex, getindex, setindex!
 
+using Core: Typeof
+
 using StructEqualHash
 
 include("basics.jl")

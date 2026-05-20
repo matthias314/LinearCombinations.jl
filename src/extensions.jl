@@ -686,13 +686,9 @@ struct LinearComposedFunction{O,I} <: AbstractComposedFunction
     inner::I
 end
 
-function (f::LinearComposedFunction)(x...; kw...)
-    y = InnerKw(f.inner, kw)(x...)
-    if get(kw, :is_filtered, false) && has_isfiltered(f.outer, typeof(y))
-        f.outer(y; kw..., :is_filtered => keeps_filtered(f.inner, map(typeof, x)...))
-    else
-        f.outer(y; kw...)
-    end
+function (f::LinearComposedFunction)(xs::Vararg{Any,M}; is_filtered = false, kw...) where M
+    TryLinearKw(f.inner)(xs...; is_filtered) |>
+        TryLinearKw(f.outer; is_filtered = is_filtered && keeps_filtered(f.inner, map(typeof, xs)...), kw...)
 end
 
 hastrait(f::LinearComposedFunction, trait::Val, types::Type...) = hastrait(f.outer, trait, return_type(f.inner, types...))
@@ -706,39 +702,35 @@ end
 @multilinear f::TermComposedFunction LinearComposedFunction(f.outer, f.inner)
 
 #
-# InnerKw
+# TryLinearKw
 #
 
-struct InnerKw{F,KW}
+struct TryLinearKw{F,KW}
     f::F
     kw::KW
 end
 
-InnerKw(f; kw...) = InnerKw(f, kw)
+TryLinearKw(f; kw...) = TryLinearKw{Typeof(f), typeof(kw)}(f, kw)
 
-function (f::InnerKw)(x...)
+@struct_equal_hash TryLinearKw
+
+deg(f::TryLinearKw) = deg(f.f)
+
+function (f::TryLinearKw)(x...; kw...)
+    kw = (; f.kw..., kw...)
     TT = map(typeof, x)
-    kwi = (;)
-    if has_isfiltered(f.f, TT...)
-        kwi = push_kw(kwi; is_filtered = get(f.kw, :is_filtered, false))
-    end
-    R = _coefftype(get(f.kw, :addto, missing))
-    if R === missing
-        R = unval(get(f.kw, :coefftype, missing))
-    end
-    if has_char2(R) && has_coefftype(f.f, TT...)
-        kwi = push_kw(kwi; coefftype = R)
-    end
-    f.f(x...; kwi...)
+    kw = has_coefftype(f.f, TT...) ? kw : Base.delete(kw, :coefftype)
+    kw = has_isfiltered(f.f, TT...) ? kw : Base.delete(kw, :is_filtered)
+    kw = has_sizehint(f.f, TT...) ? kw : Base.delete(kw, :sizehint)
+    f.f(x...; kw...)
 end
 
-hastrait(f::InnerKw, trait::Val, types::Type...) = hastrait(f.f, trait, types...)
+hastrait(::TryLinearKw, ::Union{Val{:coefftype}, Val{:is_filtered}, Val{:sizehint}}, ::Type...) = true
+hastrait(f::TryLinearKw, trait::Val, types::Type...) = hastrait(f.f, trait, types...)
 
-keeps_filtered(f::InnerKw, types::Type...) = keeps_filtered(f.f, types...)
+keeps_filtered(f::TryLinearKw, types::Type...) = keeps_filtered(f.f, types...)
 
-deg(f::InnerKw) = deg(f.f)
-
-# return_type(f::InnerKw, types::Type...) = return_type(f.f, types...)
+return_type(f::TryLinearKw, types::Type...) = return_type(f.f, types...)
 
 #
 # bilinear and multilinear extension of multiplication

@@ -796,7 +796,7 @@ function (tf::AbstractTensor{<:Tuple{Vararg{Any,N}}})(ttx::Vararg{AbstractTensor
         kw...) where {N,M}
 
     tfx = map(Tuple(tf), map(Tuple, ttx)...) do f, x...
-        InnerKw(f; is_filtered, kw...)(x...)
+        TryLinearKw(f)(x...; is_filtered, kw...)
     end
 
     tensor_if = is_filtered && all(map(Tuple(tf), ttx, tfx) do f, tx, fx
