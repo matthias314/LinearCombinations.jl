@@ -318,9 +318,11 @@ Linear{String, Int64} with 2 terms:
 """
 macro linear(f)
     F = Meta.isexpr(f, :(::), 1) ? Expr(:(::), :f, esc(f.args[1])) : esc(f)
-    G = Meta.isexpr(f, :(::)) ? esc(f.args[end]) : :(typeof($(esc(f))))
+    FT = Meta.isexpr(f, :(::)) ? F : :(::typeof($(esc(f))))
     quote
         function $F end
+
+        $(@__MODULE__).hastrait($FT, ::Val{trait}, ::Type{<:Linear}) where trait = trait != :is_filtered  # TODO: use @linear_kw
 
         function $F(a::L;
                 coefftype = Sign,
