@@ -1,12 +1,15 @@
 module TestHelpers
 
+using Base: Fix1, Fix2
+
+using StructEqualHash
 using ..LinearCombinations
+using ..LinearCombinations: sum0
+import LinearCombinations: deg, return_type, keeps_filtered, hastrait, linear_filter
 
 # ShowArgs
 
 export ShowArgs
-
-import LinearCombinations: hastrait, keeps_filtered, deg
 
 struct ShowArgs{F}
     f::F
@@ -26,9 +29,6 @@ deg(f::ShowArgs) = deg(f.f)
 # ShowFilter
 
 export ShowFilter
-
-import LinearCombinations: linear_filter
-using StructEqualHash
 
 struct ShowFilter{T} x::T end
 
@@ -64,7 +64,8 @@ Base.:*(x::ErrorFilter, y::ErrorFilter) = ErrorFilter(x.x*y.x)
 
 export BasicLinear
 
-import LinearCombinations: zero, getcoeff, setcoeff!, length, iterate
+import LinearCombinations: zero, getcoeff, setcoeff!
+import Base: length, iterate
 
 struct BasicLinear{T,R} <: AbstractLinear{T,R}
     a::Linear{T,R}
@@ -86,5 +87,94 @@ end
 length(a::BasicLinear) = length(a.a)
 
 iterate(a::BasicLinear, state...) = iterate(a.a, state...)
+
+# Graded and @gr_str
+
+using ..LinearCombinations: _termtype, _coefftype
+
+export Graded, GradedString, ungraded, @gr_str
+
+struct Graded{T,D}
+    x::T
+    n::D
+end
+
+Graded(::Type{T}, n::D) where {T,D} = Graded{Type{T},D}(T, n)
+
+const GradedString = Graded{String,Int}
+
+GradedString(s::String) = Graded(s, length(s))
+
+function Base.show(io::IO, gr::Graded)
+    if gr isa GradedString && gr.n == length(gr.x)
+        print(io, "gr")
+        show(io, gr.x)
+    else
+        show(io, gr.x)
+        print(io, '⟨', gr.n, '⟩')
+    end
+end
+
+@struct_equal_hash Graded
+
+@linear ::Fix2{Type{Graded}}
+
+@linear ungraded
+
+ungraded(gr::Graded) = gr.x
+ungraded(::Type{<:Graded{T}}) where T = T
+ungraded(::Type{Linear{<:Graded{T},R}}) where {T,R} = Linear{T,R}
+ungraded(::Type{Linear1{<:Graded{T},R}}) where {T,R} = Linear1{T,R}
+ungraded(::Type{L}) where L <: AbstractLinear = error("linear type $L not supported")
+
+deg(gr::Graded) = gr.n
+
+linear_filter(gr::Graded) = linear_filter(gr.x)
+
+function Base.:*(grs::Vararg{Graded,M}) where M
+    n = sum0(map(deg, grs))
+    Graded(*(map(ungraded, grs)...), n)
+end
+
+struct GradedCallable{GR}
+    gr::GR
+end
+
+@struct_equal_hash GradedCallable
+
+function (grc::GradedCallable)(args::Graded...; kw...)
+    n = sum(deg, args; init = deg(grc.gr))
+    Fix2(Graded, n)(grc.gr.x(map(ungraded, args)...; kw...))
+end
+
+function return_type(grc::GradedCallable{Graded{GR,D}}, types::Type...) where {GR,D}
+    LU = return_type(grc.gr.x, map(ungraded, types)...)
+    E = promote_type(D, map(Fix1(return_type, deg), types)...)
+    GRU = Graded{_termtype(LU),E}
+    if LU <: Linear
+        Linear{GRU, _coefftype(LU)}
+    elseif LU <: Linear1
+        Linear1{GRU, _coefftype(LU)}
+    else
+        @assert !(LU <: AbstractLinear) "linear type $LU not supported"
+        GRU
+    end
+end
+
+keeps_filtered(grc::GradedCallable, types::Type...) = keeps_filtered(grc.gr.x, map(ungraded, types)...)
+hastrait(grc::GradedCallable, trait::Val, types::Type...) = hastrait(grc.gr.x, trait, map(ungraded, types)...)
+
+@multilinear gr::Graded GradedCallable(gr)
+
+macro gr_str(s) GradedString(unescape_string(s)) end
+
+Base.firstindex(gr::GradedString) = firstindex(gr.x)
+Base.lastindex(gr::GradedString) = lastindex(gr.x)
+Base.length(gr::GradedString) = length(gr.x)
+
+Base.getindex(gr::GradedString, i::Integer) = gr.x[i]
+Base.getindex(gr::GradedString, ii::AbstractVector{<:Integer}) = GradedString(gr.x[ii])
+
+Base.:^(gr::GradedString, k::Integer) = GradedString(repeat(gr.x, k))
 
 end # module TestHelpers
