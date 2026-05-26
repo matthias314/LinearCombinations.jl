@@ -268,7 +268,7 @@ _coefftype(::Missing) = missing
 
 function ==(a::AbstractLinear, b::AbstractLinear)
     length(a) == length(b) && all(hashed_iter(a)) do (x, c)
-        getcoeff(a, unhash(x)) == c
+        getcoeff(b, x) == c
     end
 end
 
