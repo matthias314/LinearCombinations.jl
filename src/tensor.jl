@@ -146,13 +146,13 @@ interfaces. This makes for example splatting available for tensors, and
 the `i`-th component of `t::Tensor` can be accessed as `t[i]`.
 
 Tensors can be nested. Different bracketings lead to different tensors. The functions
-`cat`, `flatten`, `swap` and `regroup` are provided to make rearranging tensors more easily.
+`cat`, `flatten`, `swap` and the type `Regroup` are provided to make rearranging tensors more easily.
 
 Note that the type parameter of `Tensor` is always a `Tuple`. For instance, the type of
 a `Tensor` with two components of types `T1` and `T2` is `Tensor{Tuple{T1,T2}}`, not
 `Tensor{T1,T2}`.
 
-See also [`tensor`](@ref), [`cat`](@ref), [`flatten`](@ref), [`regroup`](@ref), [`swap`](@ref).
+See also [`tensor`](@ref), [`cat`](@ref), [`flatten`](@ref), [`swap`](@ref), [`Regroup`](@ref).
 
 # Examples
 

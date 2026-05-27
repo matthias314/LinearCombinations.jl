@@ -4,69 +4,6 @@
 
 export regroup, regroup_inv, @regroup_str, @regroup_inv_str, Regroup, swap
 
-function build_dict(ex, i, v, d)
-    # @show ex i v
-    if ex isa Expr
-        ex.head === :tuple || error("malformed tree")
-        for (j, a) in enumerate(ex.args)
-            push!(v, j)
-            i = build_dict(a, i, v, d)
-            pop!(v)
-        end
-        i
-    else
-        haskey(d, ex) && error("malformed tree")
-        d[ex] = i+1 => Expr(:call, :f, :x, v...)
-        i+1
-    end
-end
-
-function build_tree(ex, d, i, perm)
-    if ex isa Expr
-        ex.head === :tuple || error("malformed tree")
-        Expr(:call, :g, (build_tree(a, d, i, perm) for a in ex.args)...)
-    else
-        haskey(d, ex) || error("incompatible trees")
-        j = d[ex].first
-        perm[j] == 0 || error("malformed tree")
-        perm[j] = i[] += 1
-        d[ex].second
-    end
-end
-
-function tuple_from_expr(ex, d)
-    if ex isa Expr
-        ex.head === :tuple || error("malformed tree")
-        Tuple(tuple_from_expr(a, d) for a in ex.args)
-    else
-        d[ex].first
-    end
-end
-
-function regroup_tuples_data(expr_a, expr_b)
-    d = Dict{Any,Pair{Int,Expr}}()
-    n = build_dict(expr_a, 0, Int[], d)
-
-    args = Vector{Expr}(undef, n)
-    for (i, ex) in values(d)
-        args[i] = ex
-    end
-
-    perm = zeros(Int, n)
-    i = Ref(0)
-    expr = build_tree(expr_b, d, i, perm)
-    any(iszero, perm) && error("incompatible trees")
-
-    aa = tuple_from_expr(expr_a, d)
-    bb = tuple_from_expr(expr_b, d)
-
-    aa, bb, (; expr, args, perm)
-end
-
-const RegroupCacheEltype = NamedTuple{(:expr, :args, :perm), Tuple{Expr, Vector{Expr}, Vector{Int}}}
-
-const regroup_cache = IdDict{Any,RegroupCacheEltype}()
-
 """
     $(@__MODULE__).Regroup{A, B}
 
@@ -82,9 +19,29 @@ struct Regroup{A,B} end
 # == is ===
 # hash is computed from objectid
 
-regroup_get(::Type{T}, field) where T <: Regroup = regroup_cache[T][field]
-
 show(io::IO, rg::Regroup{A,B}) where {A,B} = print(io, "Regroup{$A, $B}")
+
+# type parameters in method signatures disable @nospecialize
+regroup_a(::Regroup{A}) where A = A
+regroup_b(::Regroup{A,B}) where {A,B} = B
+
+function regroup_build!((d, i), ex::Expr)
+    ex.head == :tuple || error("malformed source tree")
+    Tuple(map(Fix1(regroup_build!, (d, i)), ex.args))
+end
+
+function regroup_build!((d, i), ex)
+    haskey(d, ex) ? error("malformed source tree") : d[ex] = i[] += 1
+end
+
+function regroup_replace!(d, ex::Expr)
+    ex.head == :tuple || error("malformed target tree")
+    Tuple(map(Fix1(regroup_replace!, d), ex.args))
+end
+
+function regroup_replace!(d, ex)
+    haskey(d, ex) ? pop!(d, ex) : error("malformed or incompatible target tree")
+end
 
 """
     regroup"a -> b" -> Regroup
@@ -106,6 +63,7 @@ shape as `b`. The components of the nested tensor `t` are permuted according to 
 If the components of `t` have non-zero degrees, then `rg(t)` additionally has a sign according to
 the usual sign rule: whenever two ojects `x` and `y` are swapped, then this incurs
 the sign `(-1)^(deg(x)*(deg(y)))`.
+In this case the returned value is of type `Linear1` instead of `Tensor`.
 
 Moreover, `rg` is linear and can be called with linear combinations of tensors.
 
@@ -121,11 +79,13 @@ See also [`swap`](@ref), [`@regroup_inv_str`](@ref), [`Regroup`](@ref), [`$(@__M
 julia> rg = regroup"(1, (2, 3), 4) -> ((3, 1), (4, 2))"
 Regroup{(1, (2, 3), 4), ((3, 1), (4, 2))}
 
+julia> rg == regroup"(a, (b, c), d) -> ((c, a), (d, b))"
+true
+
 julia> t = Tensor("x", Tensor("y", "z"), "w")
 "x"⊗("y"⊗"z")⊗"w"
 
 julia> rg(t)
-Linear1{Tensor{Tuple{Tensor{Tuple{String, String}}, Tensor{Tuple{String, String}}}}, Int64} with 1 term:
 ("z"⊗"x")⊗("w"⊗"y")
 ```
 
@@ -158,18 +118,15 @@ possibly other structures.
 See [`@regroup_str`](@ref).
 """
 function regroup(a, b)
-    aa, bb, data = regroup_tuples_data(a, b)
-    aa isa Tuple || error("first expression must be a tuple")
-    T = Regroup{aa,bb}
-    regroup_cache[T] = data
-    T()
+    d = Dict{Any,Int}()
+    A = regroup_build!((d, Ref(0)), a)
+    A isa Tuple || error("source must be a tuple")
+    B = regroup_replace!(d, b)
+    isempty(d) || error("incompatible target tree")
+    Regroup{A,B}()
 end
 
 deg(::Regroup) = Zero()
-
-@linear rg::Regroup
-
-keeps_filtered(::Regroup, ::Type) = true
 
 """
     regroup_inv(a, b) -> Tuple{Regroup, Regroup}
@@ -198,12 +155,11 @@ macro regroup_inv_str(s)
 end
 
 """
-    swap(t::AbstractTensor{Tuple{T1,T2}}) where {T1,T2} -> AbstractLinear{Tensor{Tuple{T2,T1}}}
-    swap(a::AbstractLinear{AbstractTensor{Tuple{T1,T2}})}) where {T1,T2}
-        -> AbstractLinear{Tensor{Tuple{T1,T2}})}
+    swap(t::AbstractTensor{Tuple{T1,T2}}) where {T1,T2}
 
 This linear function swaps the components of two-component tensors. If the two components
 of a tensor `t` have non-zero degrees, then the usual sign `(-1)^(deg(t[1])*deg(t[2]))` is introduced.
+In this case the returned value is of type `Linear1` instead of `Tensor`.
 By default, all terms have zero degree.
 
 Note that `swap` is a special case of `regroup`:  it is simply defined as `regroup(:((1, 2)), :((2, 1)))`.
@@ -219,20 +175,19 @@ julia> t = Tensor("x", "z")
 "x"⊗"z"
 
 julia> swap(t)
-Linear1{Tensor{Tuple{String, String}}, Int64} with 1 term:
 "z"⊗"x"
 
 julia> a = Linear("x" => 1, "yy" => 1) ⊗ Linear("z" => 1, "ww" => 1)
 Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
-"yy"⊗"z"+"x"⊗"ww"+"x"⊗"z"+"yy"⊗"ww"
+"x"⊗"z"+"x"⊗"ww"+"yy"⊗"z"+"yy"⊗"ww"
 
 julia> swap(a)
 Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
-"ww"⊗"yy"+"z"⊗"x"+"z"⊗"yy"+"ww"⊗"x"
+"ww"⊗"yy"+"ww"⊗"x"+"z"⊗"x"+"z"⊗"yy"
 
 julia> swap(a; coeff = 2)
 Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
-2*"ww"⊗"yy"+2*"z"⊗"x"+2*"z"⊗"yy"+2*"ww"⊗"x"
+2*"ww"⊗"yy"+2*"ww"⊗"x"+2*"z"⊗"x"+2*"z"⊗"yy"
 ```
 ## Examples with degrees
 
@@ -246,84 +201,112 @@ Linear1{Tensor{Tuple{String, String}}, Int64} with 1 term:
 
 julia> swap(a)   # same a as before
 Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
-"ww"⊗"yy"-"z"⊗"x"+"z"⊗"yy"+"ww"⊗"x"
+"ww"⊗"yy"+"ww"⊗"x"-"z"⊗"x"+"z"⊗"yy"
 ```
 """
 const swap = regroup(:((1,2)), :((2,1)))
 
-@propagate_inbounds @generated regroup_eval_expr(rg::Regroup, f, g, x) = regroup_get(rg, :expr)
+regroup_indices!(iv::Vector{Vector{Int}}, ii::Vector{Int}, ::Int) = push!(iv, copy(ii))
+
+function regroup_indices!(iv::Vector{Vector{Int}}, ii::Vector{Int}, @nospecialize(t::Tuple))
+    for (i, x) in enumerate(t)
+        regroup_indices!(iv, push!(ii, i), x)
+        pop!(ii)
+    end
+    iv
+end
+
+function regroup_getindex_expr(ii::Vector{Int})
+    foldl(ii; init = :t) do ex, i
+        Expr(:call, :regroup_getindex, ex, i)
+    end
+end
+
+regroup_expr(iv::Vector{Vector{Int}}, i::Int) = regroup_getindex_expr(iv[i])
+
+function regroup_expr(iv::Vector{Vector{Int}}, @nospecialize(t::Tuple))
+    Expr(:call, :regroup_collect, (regroup_expr(iv, x) for x in t)...)
+end
+
+@generated function regroup_callable(rg::Regroup{A,B}, regroup_collect, t) where {A,B}
+    iv = regroup_indices!(Vector{Int}[], Int[], A)
+    regroup_expr(iv, B)
+end
+
+regroup_check_arg(::Type, ::Int, ::Type) = true
+
+function regroup_check_arg(T::Type, A::Tuple, TX::Type)
+    @foldable
+    TX <: T && begin
+        TT = fieldtypes(TX)
+        length(TT) == length(A) && all(map(Fix1(regroup_check_arg, T), A, TT))
+    end
+end
+
+@propagate_inbounds regroup_getindex(x, i) = x[i]
+@propagate_inbounds regroup_getindex(::Type{T}, i) where T = fieldtypes(T)[i]
+
+regroup_flatten(x) = (x,)
+regroup_flatten(t::Tuple) = tuple_cat(map(regroup_flatten, t)...)
+regroup_flatten(::Type{T}) where T <: AbstractTensor = regroup_flatten(fieldtypes(T))
 
 #
 # regrouping of tensors
 #
 
-regroup_length(::Type{T}) where T = length(fieldtypes(T))
-
-regroup_getindex(x) = x
-@propagate_inbounds regroup_getindex(x, i) = x[i]
-@propagate_inbounds regroup_getindex(x, i, ii...) = regroup_getindex(regroup_getindex(x, i), ii...)
-
-@propagate_inbounds regroup_getindex(::Type{T}, i) where T = fieldtypes(T)[i]
-
-regroup_check_arg(::Type, ::Type, ::Type) = true
-
-Base.@assume_effects :nothrow function regroup_check_arg(::Type{T}, ::Type{TT}, ::Type{TX}) where {T,TT<:Tuple,TX}
-    n = regroup_length(TT)
-    TX <: T && regroup_length(TX) == n &&
-        all(ntuple(i -> regroup_check_arg(T, regroup_getindex(TT, i), regroup_getindex(TX, i)), n))
-end
-
-# @assume_effects allows to omit the sign computation for has_char2 coefficients
-Base.@assume_effects :foldable :nothrow @generated function regroup_tensor_signexp(rg, f, x)
-    args = Expr(:tuple, regroup_get(rg, :args)...)
-    perm = regroup_get(rg, :perm)
-    invdeg = (:(degs[$i]*degs[$j]) for j in 2:length(perm) for i in 1:j-1 if perm[i] > perm[j])
+@generated function regroup_tensor_signexp(rg::Regroup{A,B}, t) where {A,B}
+    perm = regroup_flatten(B)
+    N = length(perm)
+    iv = regroup_indices!(Vector{Int}[], Int[], A)
+    dv = [Expr(:call, deg, regroup_getindex_expr(iv[i])) for i in 1:N]
+    dp = (Expr(:call, *, dv[i], dv[j]) for j in 1:N for i in 1:j-1 if perm[i] > perm[j])
     quote
-        degs = map(deg, $args)
-        sum0(($(invdeg...),))
+        sum0(($(dp...),))
     end
 end
 
-@inline regroup_sign(rg, x, c) = withsign(regroup_tensor_signexp(rg, regroup_getindex, x), c)
+regroup_tensor_nosign(rg, t) = regroup_callable(rg, Tensor∘tuple, t)
 
-@inline regroup_term(rg, x) = regroup_eval_expr(rg, regroup_getindex, Tensor, x)
+@linear_kw function regroup_tensor_sign(rg, t::T;
+        coefftype = Sign,
+        addto = zero(linear_return_type(rg, unval(coefftype), T)),
+        coeff = ONE,
+        is_filtered::Bool = false) where T <: AbstractTensor
+    rgt = regroup_tensor_nosign(rg, t)
+    c = has_char2(addto) ? coeff : withsign(regroup_tensor_signexp(rg, t), coeff)
+    addmul!(addto, rgt, c; is_filtered)
+end
 
-@linear_kw function (rg::Regroup{A,B})(x::T;
-        coefftype = missing,
-        addto = missing,
-        coeff = one(DefaultCoefftype),
-        is_filtered::Bool = false) where {A,B,T<:AbstractTensor}
-    regroup_check_arg(AbstractTensor, typeof(A), T) ||
+function (rg::Regroup{A,B})(t::T; kw...) where {A, B, T <: AbstractTensor}
+    regroup_check_arg(AbstractTensor, A, T) ||
         error("argument type $T does not match first Regroup parameter $A")
-
-    if addto !== missing
-        R = _coefftype(addto)
-    elseif coefftype !== missing
-        R = unval(coefftype)
+    if regroup_tensor_signexp_type(rg, T) === Zero
+        regroup_tensor_nosign(rg, t; kw...)
     else
-        R = missing
-    end
-
-    if R === missing || !has_char2(R)
-        coeff = regroup_sign(rg, x, coeff)
-    end
-    if R === missing
-        R = typeof(coeff)
-    end
-
-    y = regroup_term(rg, x)
-
-    if addto !== missing
-        addmul!(addto, y, coeff; is_filtered)
-    else
-        Linear1{typeof(y),R}(y => coeff; is_filtered)
+        regroup_tensor_sign(rg, t; kw...)
     end
 end
 
-#=
-function return_type(rg::RG, ::Type{T}) where {RG<:Regroup,T<:AbstractTensor}
-    R = return_type(regroup_sign, RG, T, DefaultCoefftype)
-    U = return_type(regroup_term, RG, T)
-    Linear1{U,R}
+@linear ::Regroup
+
+keeps_filtered(::Regroup, ::Type{<:AbstractTensor}) = true
+
+hastrait(rg::Regroup, trait::Val, ::Type{T}) where T <: AbstractTensor =
+    regroup_tensor_signexp_type(rg, T) !== Zero && hastrait(regroup_tensor_sign, trait, typeof(rg), T)
+
+function regroup_tensor_signexp_type(rg::Regroup, T::Type{<:AbstractTensor})
+    @foldable
+    perm = regroup_flatten(regroup_b(rg))
+    DT = map(Fix1(return_type, deg), regroup_flatten(T))
+    promote_type(Zero, (promote_type_product(DT[i], DT[j]) for j in 1:length(perm) for i in 1:j-1 if perm[i] > perm[j])...)
 end
-=#
+
+function return_type(rg::Regroup, T::Type{<:AbstractTensor})
+    @foldable
+    regroup_check_arg(AbstractTensor, regroup_a(rg), T) || return Union{}
+    SE = regroup_tensor_signexp_type(rg, T)
+    U = regroup_callable(rg, (TS...) -> Tensor{Tuple{TS...}}, T)
+    SE === Zero && return U
+    S = signtype(SE)
+    Linear1{U, S <: Sign ? DefaultCoefftype : S}
+end
