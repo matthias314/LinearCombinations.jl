@@ -676,33 +676,45 @@ deg(g::MultilinearExtension) = deg(g.f)
 # composition of linear functions
 #
 
-abstract type AbstractComposedFunction end
+export LinearComposedFunction
 
-keeps_filtered(f::AbstractComposedFunction, types::Type...) = keeps_filtered(f.outer, return_type(f.inner, types...))
-
-deg(f::AbstractComposedFunction) = deg(f.outer) + deg(f.inner)
-
-return_type(f::AbstractComposedFunction, types::Type...) = return_type(f.outer, return_type(f.inner, types...))
-
-struct LinearComposedFunction{O,I} <: AbstractComposedFunction
+struct LinearComposedFunction{O,I}
     outer::O
     inner::I
+    LinearComposedFunction(outer, inner) = new{Typeof(outer), Typeof(inner)}(outer, inner)
 end
 
-function (f::LinearComposedFunction)(xs::Vararg{Any,M}; is_filtered = false, kw...) where M
-    TryLinearKw(f.inner)(xs...; is_filtered) |>
-        TryLinearKw(f.outer; is_filtered = is_filtered && keeps_filtered(f.inner, map(typeof, xs)...), kw...)
+@struct_equal_hash LinearComposedFunction
+
+function show(io::IO, f::LinearComposedFunction)
+    print(io, "LinearComposedFunction(")
+    show(io, f.outer)
+    print(io, ", ")
+    show(io, f.inner)
+    print(io, ')')
 end
 
-hastrait(f::LinearComposedFunction, trait::Val, types::Type...) = hastrait(f.outer, trait, return_type(f.inner, types...))
-hastrait(f::LinearComposedFunction, trait::Val{:is_filtered}, types::Type...) = hastrait(f.inner, trait, types...)
+deg(f::LinearComposedFunction) = deg(f.outer) + deg(f.inner)
 
-struct TermComposedFunction{O,I} <: AbstractComposedFunction
-    outer::O
-    inner::I
+function linearcomposedfunction_callable(f::LinearComposedFunction, xs::Vararg{Any,M}; is_filtered = false, kw...) where M
+    R = _coefftype(return_type(f, map(typeof, xs)...))
+    inner_coefftype = has_char2(R) ? (; coefftype = Val(R)) : (;)
+    y = TryLinearKw(f.inner)(xs...; is_filtered, inner_coefftype...)
+    outer_is_filtered = is_filtered && keeps_filtered(f.inner, map(typeof, xs)...)
+    TryLinearKw(f.outer)(y; is_filtered = outer_is_filtered, kw...)
 end
 
-@multilinear f::TermComposedFunction LinearComposedFunction(f.outer, f.inner)
+const LinearComposedFunctionCallable = Fix1{typeof(linearcomposedfunction_callable)}
+
+hastrait(f::LinearComposedFunctionCallable, trait::Val, types::Type...) = hastrait(f.x.outer, trait, return_type(f.x.inner, types...))
+hastrait(f::LinearComposedFunctionCallable, trait::Val{:is_filtered}, types::Type...) = hastrait(f.x.inner, trait, types...)
+
+keeps_filtered(f::LinearComposedFunctionCallable, types::Type...) =
+    keeps_filtered(f.x.inner, types...) && keeps_filtered(f.x.outer, return_type(f.x.inner, types...))
+
+return_type(f::LinearComposedFunctionCallable, types::Type...) = return_type(f.x.outer, return_type(f.x.inner, types...))
+
+@multilinear f::LinearComposedFunction Fix1(linearcomposedfunction_callable, f)
 
 #
 # TryLinearKw
