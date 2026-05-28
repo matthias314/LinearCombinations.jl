@@ -41,7 +41,7 @@ AbstractTensor(::AbstractTensor)
 
 ```@docs
 deg(::AbstractTensor)
-*(::AbstractTensor,::AbstractTensor)
+*(::AbstractTensor{NTuple{2,Any}},::AbstractTensor{NTuple{2,Any}})
 coprod(::AbstractTensor)
 LinearCombinations.diff(::AbstractTensor)
 ```

@@ -567,14 +567,6 @@ function tensor(a::Vararg{DenseLinear,N};
     end
 end
 
-function tensor(;
-        coefftype = DefaultCoefftype,
-        addto = zero(DenseLinear{Tensor{Tuple{}}, unval(coefftype)}; basis = TensorBasis()),
-        coeff = ONE,
-        kw...)
-    addmul!(addto, Tensor(), coeff)
-end
-
 function return_type(::typeof(tensor), types::Type{<:DenseLinear}...)
     U = Tensor{Tuple{map(_termtype, types)...}}
     R = promote_type(map(_coefftype, types)...)

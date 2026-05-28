@@ -96,17 +96,6 @@ Return the degree of a tensor, which is the sum of the degrees of its components
 See also [`deg`](@ref).
 """
 deg(t::AbstractTensor) = sum0(deg, Tuple(t))
-# type inference doesn't work without "Tuple"
-
-# factor_types(::Type{<:AbstractTensor{T}}) where T <: Tuple = fieldtypes(T)
-
-#=
-deg_return_type_tensor(R, T...) = promote_type(R, map(Fix1(return_type, deg), T)...)
-
-# TODO: needed?
-return_type(::typeof(deg), ::Type{T}) where T <: AbstractTensor =
-    deg_return_type_tensor(Int, factor_types(T)...)
-=#
 
 _revsums(dt) = dt
 _revsums(dt, t...) = _revsums((t[end]+dt[1], dt...), t[1:end-1]...)
@@ -175,7 +164,7 @@ Linear{Char, Int64} with 2 terms:
 
 julia> b = Linear(Tensor('x', 'z') => 1, Tensor('y', 'z') => 2)
 Linear{Tensor{Tuple{Char, Char}}, Int64} with 2 terms:
-2*'y'⊗'z'+'x'⊗'z'
+'x'⊗'z'+2*'y'⊗'z'
 
 julia> b == tensor(a, 'z')
 true
@@ -195,8 +184,8 @@ julia> f(t)
 julia> t == Tensor(Tensor('x', 'y'), "z")
 false
 
-julia> a = tensor(); a[Tensor()]
-1
+julia> Tensor() |> typeof
+Tensor{Tuple{}}
 ```
 """
 struct Tensor{T<:Tuple} <: AbstractTensor{T}
@@ -232,8 +221,8 @@ keeps_filtered(::Type{<:Tensor}, ::Type{<:Tuple}) = true
     tensor(xs...) -> AbstractLinear{<:Tensor}
 
 `tensor` is the multilinear extension of `Tensor`. The `⊗` operator is a synomym
-for `tensor`. Note that `tensor` always returns a linear combination. The return type
-is `DenseLinear` if all arguments are `DenseLinear`; the corresponding basis is the
+for `tensor`. The return value is a `Tensor` if no argument is of type `AbstractLinear`.
+It is `DenseLinear` if all arguments are `DenseLinear`; the corresponding basis is the
 `TensorBasis` of the bases of the arguments. In all other cases the return type is
 `Linear`. This can be overriden via the `addto` keyword argument.
 
@@ -245,6 +234,9 @@ See also [`Tensor`](@ref), [`@multilinear`](@ref), [`TensorBasis`](@ref).
 # Examples
 
 ```jldoctest
+julia> tensor('x', "w")
+'x'⊗"w"
+
 julia> a = Linear('x' => 1, 'y' => 2)
 Linear{Char, Int64} with 2 terms:
 'x'+2*'y'
@@ -259,21 +251,21 @@ Linear{Tensor{Tuple{Char, String}}, Int64} with 2 terms:
 
 julia> a ⊗ b
 Linear{Tensor{Tuple{Char, String}}, Int64} with 4 terms:
--'x'⊗"z"-2*'y'⊗"z"+3*'x'⊗"w"+6*'y'⊗"w"
+-2*'y'⊗"z"+3*'x'⊗"w"+6*'y'⊗"w"-'x'⊗"z"
 
 julia> tensor('x', b, a; coefftype = Float64)
 Linear{Tensor{Tuple{Char, String, Char}}, Float64} with 4 terms:
-6.0*'x'⊗"w"⊗'y'-2.0*'x'⊗"z"⊗'y'-'x'⊗"z"⊗'x'+3.0*'x'⊗"w"⊗'x'
+3.0*'x'⊗"w"⊗'x'-'x'⊗"z"⊗'x'+6.0*'x'⊗"w"⊗'y'-2.0*'x'⊗"z"⊗'y'
 
 julia> 'x' ⊗ b ⊗ a
 Linear{Tensor{Tuple{Tensor{Tuple{Char, String}}, Char}}, Int64} with 4 terms:
--('x'⊗"z")⊗'x'+3*('x'⊗"w")⊗'x'-2*('x'⊗"z")⊗'y'+6*('x'⊗"w")⊗'y'
+-2*('x'⊗"z")⊗'y'-('x'⊗"z")⊗'x'+3*('x'⊗"w")⊗'x'+6*('x'⊗"w")⊗'y'
 
 julia> tensor('x', b, a) == 'x' ⊗ b ⊗ a
 false
 
-julia> c = tensor(); c[Tensor()]
-1
+julia> tensor() |> typeof
+Tensor{Tuple{}}
 
 julia> d = DenseLinear(a; basis = Basis('w':'z'))
 DenseLinear{Char, Int64} with 2 terms:
@@ -303,6 +295,10 @@ function return_type(::ComposedFunction{<:Type{<:Tensor}, typeof(tuple)}, types:
     @assert !any(T -> T <: AbstractLinear, types)
     Tensor{Tuple{types...}}
 end
+
+# needed to avoid methods for `DenseLinear` arguments
+tensor() = Tensor()
+return_type(::typeof(tensor)) = Tensor{Tuple{}}
 
 # transpose of tensors
 
@@ -342,8 +338,8 @@ import Base: transpose
 
 Return the transpose of a tensor `t` whose components are tensors of the same length.
 In other words, the component `transpose(t)[i][j]` is `t[j][i]`.
-If the components `t[i][j]` have non-zero degrees,
-a sign is added according to the usual sign rule.
+If the components `t[i][j]` may have non-zero degrees, a sign is added according
+to the usual sign rule. In this case the return type is `Linear1` instead of `Tensor`.
 The tensor `t` must have at least one component. If all component tensors are empty,
 then the empty tensor `Tensor()` is returned.
 
@@ -353,46 +349,79 @@ This function is linear.
 
 ## Example without signs
 
-```jldoctest transpose
+```jldoctest
 julia> t = Tensor(Tensor("a", "b", "c"), Tensor("x", "y", "z"))
 ("a"⊗"b"⊗"c")⊗("x"⊗"y"⊗"z")
 
 julia> transpose(t)
-Linear1{Tensor{Tuple{Tensor{Tuple{String, String}}, Tensor{Tuple{String, String}}, Tensor{Tuple{String, String}}}}, Int64} with 1 term:
 ("a"⊗"x")⊗("b"⊗"y")⊗("c"⊗"z")
 ```
 
-## Example with signs
+## Example with degrees
 
-As usual, the degree of a `String` is its length.
+The degree of a `GradedString` (created with the `gr""` string macro) is its length.
+```jldoctest
+julia> using $(@__MODULE__).TestHelpers: GradedString, @gr_str
 
-```jldoctest transpose
-julia> $(@__MODULE__).deg(x::String) = length(x)
+julia> t = Tensor(Tensor(gr"a", gr"b", gr"c"), Tensor(gr"x", gr"y", gr"z"))
+(gr"a"⊗gr"b"⊗gr"c")⊗(gr"x"⊗gr"y"⊗gr"z")
 
-julia> transpose(t)   # same t as before
-Linear1{Tensor{Tuple{Tensor{Tuple{String, String}}, Tensor{Tuple{String, String}}, Tensor{Tuple{String, String}}}}, Int64} with 1 term:
--("a"⊗"x")⊗("b"⊗"y")⊗("c"⊗"z")
+julia> transpose(t)
+Linear1{Tensor{Tuple{Tensor{Tuple{GradedString, GradedString}}, Tensor{Tuple{GradedString, GradedString}}, Tensor{Tuple{GradedString, GradedString}}}}, Int64} with 1 term:
+-(gr"a"⊗gr"x")⊗(gr"b"⊗gr"y")⊗(gr"c"⊗gr"z")
 ```
 """
-@linear_kw function transpose(t::AbstractTensor{<:Tuple{Vararg{AbstractTensor}}};
-# TODO: sizehint?
-        coefftype = missing,
-        addto = missing,
+transpose(t::AbstractTensor{<:Tuple{Vararg{AbstractTensor}}})
+
+@linear_kw function transpose_sign(t::T;
+        coefftype = Sign,
+        addto = zero(linear_return_type(transpose, unval(coefftype), T)),
         coeff = one(DefaultCoefftype),
-        is_filtered::Bool = false)
-    coefftype = unval(coefftype)
-    tt = transpose_nosign(t)
-    if addto !== missing || !has_char2(addto)
-        m = transpose_signexp(t)
-        coeff = withsign(m, coeff)
-    end
-    if addto === missing
-        if coefftype !== missing
-            coeff = convert(coefftype, coeff)
-        end
-        Linear1(tt => coeff; is_filtered)
+        is_filtered::Bool = false) where T
+    c = has_char2(addto) ? coeff : withsign(transpose_signexp(t), coeff)
+    addmul!(addto, transpose_nosign(t), c; is_filtered)
+end
+
+function transpose_signexp_type(T::Type{<:AbstractTensor{<:NTuple{M,AbstractTensor{<:NTuple{N,Any}}}}} where {M,N})
+    @foldable
+    M = length(fieldtypes(T))
+    N = length(fieldtypes(fieldtypes(T)[1]))
+    DT = map(Fix1(map, Fix1(return_type, deg)) ∘ fieldtypes, fieldtypes(T))
+    promote_type(Zero, (promote_type_product(DT[j+1][i], DT[l][k]) for i in 1:N-1, j in 1:M-1 for k in i+1:N, l in 1:j)...)
+end
+
+function transpose_nosign_return_type(T::Type)
+    @foldable
+    tt = map(tuple, map(fieldtypes, fieldtypes(T))...)
+    Tensor{Tuple{map(t -> Tensor{Tuple{t...}}, tt)...}}
+end
+
+function transpose_sign_return_type(T::Type)
+    @foldable
+    R = signtype(transpose_signexp_type(T))
+    Linear1{transpose_nosign_return_type(T), R <: Sign ? DefaultCoefftype : R}
+end
+
+function return_type(::typeof(transpose), T::Type{<:AbstractTensor{<:NTuple{M,AbstractTensor{<:NTuple{N,Any}}}}} where {M,N})
+    @foldable
+    if transpose_signexp_type(T) === Zero
+        transpose_nosign_return_type(T)
     else
-        addmul!(addto, tt, coeff; is_filtered)
+        transpose_sign_return_type(T)
+    end
+end
+
+keeps_filtered(::typeof(transpose), ::Type{<:AbstractTensor{<:NTuple{M,AbstractTensor{<:NTuple{N,Any}}}}}) where {M,N} = true
+
+function hastrait(::typeof(transpose), trait::Val, T::Type{<:AbstractTensor{<:NTuple{M,AbstractTensor{<:NTuple{N,Any}}}}}) where {M,N}
+    transpose_signexp_type(T) !== Zero && hastrait(transpose_sign, trait, T)
+end
+
+function transpose(t::AbstractTensor{<:NTuple{M,AbstractTensor{<:NTuple{N,Any}}}}; kw...) where {M,N}
+    if transpose_signexp_type(typeof(t)) === Zero
+        transpose_nosign(t; kw...)
+    else
+        transpose_sign(t; kw...)
     end
 end
 
@@ -409,28 +438,34 @@ This function is linear.
 
 See also: [`$(@__MODULE__).DefaultCoefftype`](@ref).
 
-# Example
+# Example without degrees
 
 ```jldoctest
-julia> import $(@__MODULE__): deg
-
-julia> deg(x::String) = length(x);
-
-julia> (s, t) = Tensor("ab", "c"), Tensor("x", "yz")
-(Tensor("ab", "c"), Tensor("x", "yz"))
+julia> (s, t) = Tensor("ab", "c"), Tensor("x", "yz");
 
 julia> s*t
-Linear{Tensor{Tuple{String, String}}, Int64} with 1 term:
--"abx"⊗"cyz"
+"abx"⊗"cyz"
+```
 
+# Example with degrees
+
+The degree of a `GradedString` (created with the `gr""` string macro) is its length.
+```jldoctest
+julia> using $(@__MODULE__).TestHelpers: GradedString, @gr_str
+
+julia> (s, t) = Tensor(gr"ab", gr"c"), Tensor(gr"x", gr"yz");
+
+julia> s*t
+Linear1{Tensor{Tuple{GradedString, GradedString}}, Int64} with 1 term:
+-gr"abx"⊗gr"cyz"
 ```
 """
-function *(ts::AbstractTensor...; kw...)
-    f = Tensor(ntuple(Returns(*), length(ts[1])))
+function *(ts::AbstractTensor{<:NTuple{N,Any}}...; kw...) where N
+    f = Tensor(ntuple(Returns(*), Val(N)))
     f(ts...; kw...)
 end
 
-hastrait(::typeof(*), ::Val, ::Type{<:AbstractTensor}...) = true
+hastrait(::typeof(*), ::Val, ::Type{<:AbstractTensor{<:NTuple{N,Any}}}...) where N = true  # TODO: is "true" OK?
 
 one(::Type{<:AbstractTensor{T}}) where T <: Tuple = Tensor(map(one, fieldtypes(T)))
 
@@ -450,23 +485,22 @@ This function is linear.
 See also: [`coprod`](@ref), [`$(@__MODULE__).DefaultCoefftype`](@ref).
 
 # Example
+
+The degree of a `GradedString` (created with the `gr""` string macro) is its length.
 ```jldoctest
-julia> import $(@__MODULE__): deg, coprod
+julia> using $(@__MODULE__).TestHelpers: GradedString, @gr_str
 
-julia> deg(x::String) = length(x);
+julia> import $(@__MODULE__): coprod
 
-julia> coprod(x::String) = Linear(Tensor(x[1:k], x[k+1:end]) => 1 for k in 1:length(x)-1);
+julia> coprod(x::GradedString) = Linear(Tensor(x[1:k], x[k+1:end]) => 1 for k in 0:length(x));
 
-julia> coprod("abc")
-Linear{Tensor{Tuple{String, String}}, Int64} with 2 terms:
-"a"⊗"bc"+"ab"⊗"c"
+julia> coprod(gr"xy")
+Linear{Tensor{Tuple{GradedString, GradedString}}, Int64} with 3 terms:
+gr"x"⊗gr"y"+gr""⊗gr"xy"+gr"xy"⊗gr""
 
-julia> t = Tensor("abc", "xyz")
-"abc"⊗"xyz"
-
-julia> coprod(t)
-Linear{Tensor{Tuple{Tensor{Tuple{String, String}}, Tensor{Tuple{String, String}}}}, Int64} with 4 terms:
-("ab"⊗"xy")⊗("c"⊗"z")+("a"⊗"xy")⊗("bc"⊗"z")+("a"⊗"x")⊗("bc"⊗"yz")-("ab"⊗"x")⊗("c"⊗"yz")
+julia> Tensor(gr"x", gr"y") |> coprod
+Linear{Tensor{Tuple{Tensor{Tuple{GradedString, GradedString}}, Tensor{Tuple{GradedString, GradedString}}}}, Int64} with 4 terms:
+(gr"x"⊗gr"y")⊗(gr""⊗gr"")+(gr"x"⊗gr"")⊗(gr""⊗gr"y")-(gr""⊗gr"y")⊗(gr"x"⊗gr"")+(gr""⊗gr"")⊗(gr"x"⊗gr"y")
 ```
 """
 function coprod(t::AbstractTensor; kw...)
@@ -514,15 +548,15 @@ Linear{String, Int64} with 2 terms:
 
 julia> c = tensor(a, b)
 Linear{Tensor{Tuple{Char, String}}, Int64} with 4 terms:
--'x'⊗"z"-2*'y'⊗"z"+3*'x'⊗"w"+6*'y'⊗"w"
+-2*'y'⊗"z"+3*'x'⊗"w"+6*'y'⊗"w"-'x'⊗"z"
 
 julia> swap(c)
 Linear{Tensor{Tuple{String, Char}}, Int64} with 4 terms:
--"z"⊗'x'+6*"w"⊗'y'+3*"w"⊗'x'-2*"z"⊗'y'
+-2*"z"⊗'y'+6*"w"⊗'y'+3*"w"⊗'x'-"z"⊗'x'
 
 julia> f(a, b)
 Linear{Tensor{Tuple{String, Char}}, Int64} with 4 terms:
--"z"⊗'x'+6*"w"⊗'y'+3*"w"⊗'x'-2*"z"⊗'y'
+6*"w"⊗'y'-2*"z"⊗'y'+3*"w"⊗'x'-"z"⊗'x'
 
 julia> f(a, b; addto = swap(c), coeff = -1)
 Linear{Tensor{Tuple{String, Char}}, Int64} with 0 terms:
@@ -537,7 +571,7 @@ end
 
 show(io::IO, g::TensorSlurp) = (print(io, "TensorSlurp("); show(io, g.f); print(io, ')'))
 
-@multilinear g::TensorSlurp TermComposedFunction(g.f, Tensor∘tuple)
+@multilinear g::TensorSlurp LinearComposedFunction(g.f, Tensor∘tuple)
 
 deg(g::TensorSlurp) = deg(g.f)
 
@@ -581,7 +615,7 @@ Linear{String, Int64} with 4 terms:
 
 julia> c = tensor(a, b)
 Linear{Tensor{Tuple{Char, String}}, Int64} with 4 terms:
--'x'⊗"z"-2*'y'⊗"z"+3*'x'⊗"w"+6*'y'⊗"w"
+-2*'y'⊗"z"+3*'x'⊗"w"+6*'y'⊗"w"-'x'⊗"z"
 
 julia> g(c)
 Linear{String, Int64} with 4 terms:
@@ -639,6 +673,7 @@ cat(t::AbstractTensor...) = Tensor(tuple_cat(t...))
 keeps_filtered(::typeof(cat), ::Type{<:AbstractTensor}...) = true
 
 function return_type(::typeof(cat), types::Type{<:AbstractTensor}...)
+    @foldable
     TT = tuple_cat(map(fieldtypes, types)...)
     Tensor{Tuple{TT...}}
 end
@@ -672,40 +707,18 @@ flatten(t::AbstractTensor) = Tensor(tuple_flatten(t))
 
 keeps_filtered(::typeof(flatten), ::Type{<:AbstractTensor}) = true
 
-
-#
-# tensor product of maps
-#
-
-
-struct TensorMap{T<:Tuple,DS<:Tuple} <: AbstractTensor{T}
-    ff::T
-    degsums::DS
-end
-
-function tensormap(ff...)
-    TensorMap(ff, revsums(map(deg, ff)))
-end
-
-Base.Tuple(f::TensorMap) = f.ff
-
-degsums(f::TensorMap) = f.degsums
-
-function deg(g::TensorMap)
-    isempty(g) ? Zero() : deg(g[1])+g.degsums[1]
-end
-
 # evaluation of AbstractTensor
 
 @multilinear tf::AbstractTensor
 
 """
-    (tf::AbstractTensor)(tx::AbstractTensor...) -> Tensor
+    (tf::AbstractTensor)(tx::AbstractTensor...)
 
 Evaluating an `AbstractTensor` on other `AbstractTensor`s (with the same number of components) is done
-componentwise. If the degrees of the components and the maps are not all zero, then
+componentwise. If the degrees of the components or the maps may be non-zero, then
 the usual sign is introduced: whenever a map `f` is moved past a component `x`, then
 this changes the sign by `(-1)^(deg(f)*deg(x))`.
+In this case the return type is `Linear1` instead of `Tensor` if no map returns a linear combination.
 
 # Examples
 
@@ -730,133 +743,128 @@ Linear{Char, Int64} with 2 terms:
 -'Z'+3*'W'
 
 julia> h(Tensor('x', 'Z'))
-Linear{Tensor{Tuple{Char, Char}}, Int64} with 1 term:
 'X'⊗'z'
 
 julia> h(tensor(a, b))
 Linear{Tensor{Tuple{Char, Char}}, Int64} with 4 terms:
--'X'⊗'z'+3*'X'⊗'w'+6*'Y'⊗'w'-2*'Y'⊗'z'
+-2*'Y'⊗'z'+6*'Y'⊗'w'+3*'X'⊗'w'-'X'⊗'z'
+
+julia> Tensor()(Tensor())
+()
 ```
 
 ## Examples with degrees
 
-We again take the length of a `String` as its degree.
+The degree of a `GradedString` (created with the `gr""` string macro) is its length.
 ```jldoctest tensorcall
-julia> import $(@__MODULE__): deg
+julia> using $(@__MODULE__).TestHelpers: GradedString, @gr_str
 
-julia> deg(x::String) = length(x);
+julia> using Base: Fix2
 
-julia> struct P{T} y::T end; deg(p::P) = deg(p.y);
+julia> j = Tensor(Fix2(*, gr"pp"), Fix2(*, gr"qqq"))
+Fix2{typeof(*), GradedString}(*, gr"pp")⊗Fix2{typeof(*), GradedString}(*, gr"qqq")
 
-julia> @linear p::P; (p::P)(x) = x * p.y
+julia> j(Tensor(gr"x", gr"yy"))
+Linear1{Tensor{Tuple{GradedString, GradedString}}, Int64} with 1 term:
+-gr"xpp"⊗gr"yyqqq"
 
-julia> p = P("pp"); q = P("qqq")
-P{String}("qqq")
-
-julia> j = Tensor(p, q)
-P{String}("pp")⊗P{String}("qqq")
-
-julia> j(Tensor("x", "yy"))
-Linear{Tensor{Tuple{String, String}}, Int64} with 1 term:
--"xpp"⊗"yyqqq"
-
-julia> a = Linear("x" => 1, "yy" => 2)
-Linear{String, Int64} with 2 terms:
-"x"+2*"yy"
+julia> a = Linear(gr"x" => 1, gr"yy" => 2)
+Linear{GradedString, Int64} with 2 terms:
+2*gr"yy"+gr"x"
 
 julia> b = tensor(a, a)
-Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
-2*"yy"⊗"x"+2*"x"⊗"yy"+4*"yy"⊗"yy"+"x"⊗"x"
+Linear{Tensor{Tuple{GradedString, GradedString}}, Int64} with 4 terms:
+gr"x"⊗gr"x"+2*gr"yy"⊗gr"x"+4*gr"yy"⊗gr"yy"+2*gr"x"⊗gr"yy"
 
 julia> j(b)
-Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
--2*"xpp"⊗"yyqqq"+2*"yypp"⊗"xqqq"-"xpp"⊗"xqqq"+4*"yypp"⊗"yyqqq"
+Linear{Tensor{Tuple{GradedString, GradedString}}, Int64} with 4 terms:
+-gr"xpp"⊗gr"xqqq"+2*gr"yypp"⊗gr"xqqq"-2*gr"xpp"⊗gr"yyqqq"+4*gr"yypp"⊗gr"yyqqq"
 ```
 
 ## A multilinear example
 
 ```jldoctest
-julia> @multilinear f; f(x::Char...) = join(x, '&');
-
-julia> @multilinear g; g(x::Char...) = join(x, '@');
-
-julia> f('a', 'p', 'x')
-"a&p&x"
-
-julia> Tensor(f, g)(Tensor('a', 'b'), Tensor('p', 'q'), Tensor('x', 'y'))
-Linear{Tensor{Tuple{String, String}}, Int64} with 1 term:
-"a&p&x"⊗"b@q@y"
+julia> Tensor(*, *)('a'⊗'b', 'p'⊗'q', 'x'⊗'y')
+"apx"⊗"bqy"
 ```
 """
-function (tf::AbstractTensor{<:Tuple{Vararg{Any,N}}})(ttx::Vararg{AbstractTensor{<:Tuple{Vararg{Any,N}}},M};
-        coefftype = Sign,
-        addto = zero(linear_return_type(tf, unval(coefftype), map(typeof, ttx)...)),
-        coeff = ONE,
-        is_filtered::Bool = false,
-        kw...) where {N,M}
+AbstractTensor(::AbstractTensor)  # to work around JuliaDocs/Documenter.jl#558
 
-    tfx = map(Tuple(tf), map(Tuple, ttx)...) do f, x...
-        TryLinearKw(f)(x...; is_filtered, kw...)
-    end
-
-    tensor_if = is_filtered && all(map(Tuple(tf), ttx, tfx) do f, tx, fx
-            fx isa AbstractLinear || keeps_filtered(f, map(typeof, Tuple(tx))...)
-    end)
-
-    if !has_char2(map(_coefftype, tfx)...; kw...)
-        m = transpose_signexp(Tensor(tf, ttx...))
-        coeff = withsign(m, coeff)
+function (tf::AbstractTensor{<:NTuple{N,Any}})(txs::Vararg{AbstractTensor{<:NTuple{N,Any}},M}; kw...) where {N,M}
+    if return_type(tf, map(typeof, txs)...) <: AbstractLinear
+        tensor_callable_linear(tf, txs...; kw...)
     else
-        m = Zero()
+        tensor_callable_tensor(tf, txs...; kw...)
     end
-
-    tensor(tfx...; addto, coeff, is_filtered = tensor_if, kw...)
 end
 
-hastrait(::AbstractTensor, ::Val, types::Type...) = true
+function tensor_callable_tensor(tf::AbstractTensor{<:NTuple{N,Any}}, txs::Vararg{AbstractTensor{<:NTuple{N,Any}},M}) where {N,M}
+    tc = transpose(Tensor((tf, txs...)))
+    tensor(map(TensorSplat(Eval), Tuple(tc))...)
+end
 
-function return_type(tf::AbstractTensor{<:Tuple{Vararg{Any,N}}}, types::Vararg{Type{<:AbstractTensor{<:Tuple{Vararg{Any,N}}}},M}) where {N,M}
-    tt = map(fieldtypes, types)
+@linear_kw function tensor_callable_linear(tf::AbstractTensor{<:NTuple{N,Any}}, txs::Vararg{AbstractTensor{<:NTuple{N,Any}},M};
+        coefftype = Val(Sign),
+        addto = zero(linear_return_type(tf, unval(coefftype), map(typeof, txs)...)),
+        coeff = ONE,
+        is_filtered::Bool = false) where {N,M}
+    R = _coefftype(addto)
+    inner_kw = has_char2(R) ? (; coefftype = Val(R), is_filtered) : (; is_filtered)
+    tc = Tuple(transpose_nosign(Tensor((tf, txs...))))
+    ty = map(TensorSplat(TryLinearKw(Eval; inner_kw...)), tc)
 
-    rt = ntuple(Val(N)) do i
-        return_type(tf[i], map(T -> T[i], tt)...)
-    end
+    c = has_char2(R) ? coeff : withsign(transpose_signexp(Tensor((tf, txs...))), coeff)
 
-    # compute sign type
-    S = if N == 0
-        Sign
+    is_filtered = is_filtered && all(map(Tuple(tf), tc, ty) do f, tx, y
+            y isa AbstractLinear || keeps_filtered(f, map(typeof, Tuple(tx)[2:end])...)
+    end)
+
+    if any(y -> y isa AbstractLinear, ty)
+        tensor(ty...; addto, coeff = c, is_filtered)
     else
-        st = map(Fix1(map, Fix1(return_type, deg)), tt)
-        ft = map(Fix1(return_type, deg), fieldtypes(typeof(tf)))
-        fst = (ft, st...)
-        fst4 = ntuple(Val(N-1)) do i
-            fst3 = ntuple(Val(M)) do j
-                fst2 = ntuple(j) do k
-                    fst1 = map(Fix1(promote_type_product, fst[j+1][i]), fst[k][i+1:end])
-                    promote_type(fst1...)
-                end
-                promote_type(fst2...)
-            end
-            promote_type(fst3...)
-        end
-        signtype(promote_type(fst4...))
+        addmul!(addto, Tensor(ty), c; is_filtered)
     end
+end
 
-    U = Tensor{Tuple{map(_termtype, rt)...}}
-    R = promote_type(S, map(_coefftype, rt)...)
-    Linear{U, R <: Sign ? DefaultCoefftype : R}
+function return_type(tf::AbstractTensor{<:NTuple{N,Any}}, types::Vararg{Type{<:AbstractTensor{<:NTuple{N,Any}}}}) where N
+    @foldable
+    TC = return_type(transpose, Tensor{Tuple{typeof(tf), types...}})
+    TY = map(Tuple(tf), fieldtypes(_termtype(TC))) do f, T
+        return_type(f, fieldtypes(T)[2:end]...)
+    end
+    LU = return_type(tensor, TY...)
+    if TC <: Tensor
+        LU
+    elseif LU <: Tensor
+        Linear1{LU,coefftype(TC)}
+    else
+        change_coefftype(LU, promote_type(_coefftype(TC), _coefftype(LU)))
+    end
+end
+
+function hastrait(tf::AbstractTensor{<:NTuple{N,Any}}, trait::Val, types::Vararg{Type{<:AbstractTensor{<:NTuple{N,Any}}}}) where N
+    return_type(tf, types...) <: AbstractLinear && hastrait(tensor_callable_linear, trait, typeof(tf), types...)
+end
+
+function keeps_filtered(tf::AbstractTensor{<:NTuple{N,Any}}, types::Vararg{Type{<:AbstractTensor{<:NTuple{N,Any}}}}) where N
+    TT = transpose_nosign_return_type(Tensor{Tuple{types...}})
+    all(map((f, T) -> keeps_filtered(f, fieldtypes(T)...), Tuple(tf), fieldtypes(TT)))
 end
 
 # differential
 
-function tensor_diff(addto, coeff, x, dx, degx, sizehint)
+function tensor_diff(addto, coeff, x, dx, degx, sizehint, is_filtered)
     isempty(dx) && return addto
     dx1, dx... = dx
     degx1, degx... = degx
     coeff = withsign(degx1, coeff)
     k = length(x)-length(dx)
-    tensor(x[1:k-1]..., dx1, x[k+1:end]...; addto, coeff, sizehint)
-    tensor_diff(addto, coeff, x, dx, degx, sizehint)
+    if dx1 isa AbstractLinear
+        tensor(x[1:k-1]..., dx1, x[k+1:end]...; addto, coeff, sizehint, is_filtered)
+    else # in this case `diff` is probably not a differential ...
+        addmul!(addto, Tensor((x[1:k-1]..., dx1, x[k+1:end]...)), coeff; is_filtered)
+    end
+    tensor_diff(addto, coeff, x, dx, degx, sizehint, is_filtered)
 end
 
 """
@@ -871,34 +879,25 @@ See also [`diff`](@ref), [`$(@__MODULE__).DefaultCoefftype`](@ref).
 
 # Example
 
-As usual, the degree of a string is its length.
+The degree of a `GradedString` (created with the `gr""` string macro) is its length.
 ```jldoctest
-julia> import $(@__MODULE__): deg, diff
+julia> using $(@__MODULE__).TestHelpers: GradedString, @gr_str
 
-julia> deg(x::String) = length(x);
+julia> import $(@__MODULE__): diff
 
-julia> function diff(x::String)
-           if isempty(x) || x[1] == 'D'
-               zero(Linear1{String,Int})
-           else
-               Linear1('D'*x => 1)\
-           end
-       end;
+julia> diff(x::GradedString) = Linear1(gr"δ"*x => Int(x[1] != 'δ'));
 
-julia> dx = diff("x")
-Linear1{String, Int64} with 1 term:
-"Dx"
+julia> gr"x" |> diff
+Linear1{GradedString, Int64} with 1 term:
+gr"δx"
 
-julia> diff(dx)
-Linear1{String, Int64} with 0 terms:
+julia> gr"x" |> diff |> diff
+Linear1{GradedString, Int64} with 0 terms:
 0
 
-julia> t = Tensor("a", "bb", "ccc")
-"a"⊗"bb"⊗"ccc"
-
-julia> diff(t)
-Linear{Tensor{Tuple{String, String, String}}, Int64} with 3 terms:
--"a"⊗"Dbb"⊗"ccc"+"Da"⊗"bb"⊗"ccc"-"a"⊗"bb"⊗"Dccc"
+julia> Tensor(gr"x", gr"yy", gr"zzz") |> diff
+Linear{Tensor{Tuple{GradedString, GradedString, GradedString}}, Int64} with 3 terms:
+gr"δx"⊗gr"yy"⊗gr"zzz"-gr"x"⊗gr"δyy"⊗gr"zzz"-gr"x"⊗gr"yy"⊗gr"δzzz"
 ```
 """
 @linear_kw function diff(t::T;
@@ -909,7 +908,7 @@ Linear{Tensor{Tuple{String, String, String}}, Int64} with 3 terms:
         sizehint::Bool = true) where T <: AbstractTensor
 
     x = Tuple(t)
-    kwc = has_char2(unval(coefftype)) ? (; coefftype) : (;)
+    kwc = has_char2(addto) ? (; coefftype) : (;)
 
     dx = map(x) do y
         Y = typeof(y)
@@ -920,21 +919,26 @@ Linear{Tensor{Tuple{String, String, String}}, Int64} with 3 terms:
         diff(y; kwd...)
     end
 
-    if has_char2(unval(coefftype))
+    is_filtered = is_filtered && all(map(Tuple(t), dx) do x, y
+        y isa AbstractLinear || keeps_filtered(diff, typeof(x))
+    end)
+
+    if has_char2(addto)
         degx = ntuple(Returns(Zero()), length(x))
     else
         degx = (Zero(), map(deg, x[1:end-1])...)
     end
 
-    tensor_diff(addto, coeff, x, dx, degx, sizehint)
+    tensor_diff(addto, coeff, x, dx, degx, sizehint, is_filtered)
 end
 
-function return_type(::typeof(diff), ::Type{Tensor{T}}) where T <: Tuple
+function return_type(::typeof(diff), T::Type{<:Tensor})
+    @foldable
     DT = map(Fix1(return_type, diff), fieldtypes(T))
     RT = if fieldcount(T) > 1
         map(signtype ∘ Fix1(return_type, deg), fieldtypes(T)[1:end-1])
     else
-        ()
+        (Sign,)  # ensures that `promote_type` for `R` has at least one argument
     end
     U = map(promote_typejoin, map(_termtype, DT), fieldtypes(T))
     R = promote_type(map(_coefftype, DT)..., RT...)

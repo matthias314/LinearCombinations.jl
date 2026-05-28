@@ -91,13 +91,16 @@ julia> rg(t)
 
 # Example with degrees
 
-For simplicity, we define the degree of a `String` to be its length.
+The degree of a `GradedString` (created with the `gr""` string macro) is its length.
 ```jldoctest regroup
-julia> $(@__MODULE__).deg(x::String) = length(x)
+julia> using $(@__MODULE__).TestHelpers: GradedString, @gr_str
 
-julia> rg(t)   # same rg and t as before
-Linear1{Tensor{Tuple{Tensor{Tuple{String, String}}, Tensor{Tuple{String, String}}}}, Int64} with 1 term:
--("z"⊗"x")⊗("w"⊗"y")
+julia> t = Tensor(gr"x", Tensor(gr"y", gr"z"), gr"w")
+gr"x"⊗(gr"y"⊗gr"z")⊗gr"w"
+
+julia> rg(t)   # same rg as before
+Linear1{Tensor{Tuple{Tensor{Tuple{GradedString, GradedString}}, Tensor{Tuple{GradedString, GradedString}}}}, Int64} with 1 term:
+-(gr"z"⊗gr"x")⊗(gr"w"⊗gr"y")
 ```
 """
 macro regroup_str(s)
@@ -170,7 +173,7 @@ See also [`Tensor`](@ref), [`deg`](@ref), [`regroup`](@ref), [`$(@__MODULE__).De
 
 ## Examples without degrees
 
-```jldoctest swap
+```jldoctest
 julia> t = Tensor("x", "z")
 "x"⊗"z"
 
@@ -191,17 +194,24 @@ Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
 ```
 ## Examples with degrees
 
-For simplicity, we define the degree of a `String` to be its length.
-```jldoctest swap
-julia> $(@__MODULE__).deg(x::String) = length(x)
+The degree of a `GradedString` (created with the `gr""` string macro) is its length.
+```jldoctest
+julia> using $(@__MODULE__).TestHelpers: GradedString, @gr_str
 
-julia> swap(t)   # same t as before
-Linear1{Tensor{Tuple{String, String}}, Int64} with 1 term:
--"z"⊗"x"
+julia> t = Tensor(gr"x", gr"z")
+gr"x"⊗gr"z"
 
-julia> swap(a)   # same a as before
-Linear{Tensor{Tuple{String, String}}, Int64} with 4 terms:
-"ww"⊗"yy"+"ww"⊗"x"-"z"⊗"x"+"z"⊗"yy"
+julia> swap(t)
+Linear1{Tensor{Tuple{GradedString, GradedString}}, Int64} with 1 term:
+-gr"z"⊗gr"x"
+
+julia> a = Linear(gr"x" => 1, gr"yy" => 1) ⊗ Linear(gr"z" => 1, gr"ww" => 1)
+Linear{Tensor{Tuple{GradedString, GradedString}}, Int64} with 4 terms:
+gr"x"⊗gr"z"+gr"yy"⊗gr"ww"+gr"x"⊗gr"ww"+gr"yy"⊗gr"z"
+
+julia> swap(a)
+Linear{Tensor{Tuple{GradedString, GradedString}}, Int64} with 4 terms:
+-gr"z"⊗gr"x"+gr"ww"⊗gr"x"+gr"z"⊗gr"yy"+gr"ww"⊗gr"yy"
 ```
 """
 const swap = regroup(:((1,2)), :((2,1)))
