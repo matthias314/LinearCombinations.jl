@@ -22,6 +22,14 @@ using Core: Typeof
 
 using StructEqualHash
 
+macro foldable()
+    quote
+        Base.@assume_effects :foldable
+        @nospecialize
+        $(Expr(:meta, :nospecializeinfer))  # @nospecialize cannot appear in the function body
+    end
+end
+
 include("basics.jl")
 include("abstractlinear.jl")
 include("linear.jl")
