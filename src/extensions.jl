@@ -305,9 +305,9 @@ julia> g(a)   # same a as before
 Linear{String, Float64} with 4 terms:
 "xx"-"x"+2.0*"yy"-2.0*"y"
 
-julia> g(a; coefftype = Val(Int), coeff = 3.0)
-Linear{String, Int64} with 4 terms:
-3*"xx"-3*"x"+6*"yy"-6*"y"
+julia> g(a; coefftype = Val(BigFloat), coeff = 3.0)
+Linear{String, BigFloat} with 4 terms:
+3.0*"xx"-3.0*"x"+6.0*"yy"-6.0*"y"
 ```
 
 ## Linear extension of a callable object
@@ -325,8 +325,9 @@ Linear{String, Int64} with 2 terms:
 macro linear(f)
     F = Meta.isexpr(f, :(::), 1) ? Expr(:(::), :f, esc(f.args[1])) : esc(f)
     FT = Meta.isexpr(f, :(::)) ? F : :(::typeof($(esc(f))))
+    emptyf = f isa Symbol ? :(function $F end) : :()
     quote
-        function $F end
+        $emptyf
 
         $(@__MODULE__).hastrait($FT, ::Val{trait}, ::Type{<:Linear}) where trait = trait != :is_filtered  # TODO: use @linear_kw
 
@@ -339,19 +340,16 @@ macro linear(f)
             if iszero(coeff)
                 ;
             elseif return_type($F, T) <: AbstractLinear
-                has_ac = has_addto_coeff($F, T)
-                fkw = kw
-                if has_isfiltered($F, T)
-                    fkw = push_kw(fkw; is_filtered = true)
-                end
-                if has_sizehint($F, T)
-                    fkw = push_kw(fkw; sizehint)
+                g = if has_char2(addto)
+                    TryLinearKw($F; coefftype = Val(_coefftype(addto)), sizehint, is_filtered = true, kw...)
+                else
+                    TryLinearKw($F; sizehint, is_filtered = true, kw...)
                 end
                 for (x, c) in a
-                    if has_ac
-                        $F(x; addto, coeff = coeff*c, fkw...)
+                    if has_addto_coeff($F, T)
+                        g(x; addto, coeff = coeff*c)
                     else
-                        addmul!(addto, $F(x; fkw...), coeff*c)
+                        addmul!(addto, g(x), coeff*c)
                     end
                 end
             else
@@ -426,10 +424,15 @@ hastrait(g::LinearExtension, trait::Val, types::Type...) = hastrait(g.f, trait, 
 
 deg(g::LinearExtension) = deg(g.f)
 
-# linear extension of function evaluation
+# function evaluation
+
+Eval(f, xs...; kw...) = TryLinearKw(f)(xs...; kw...)
+
+hastrait(::typeof(Eval), ::Val{trait}, ::Type, ::Type...) where trait = trait in (:coefftype, :is_filtered, :sizehint)
 
 (a::AbstractLinear)(x...; kw...) = MultilinearExtension(Eval)(a, x...; kw...)
 
+return_type(a::L, types::Type...) where L <: AbstractLinear = return_type(Eval, L, types...)
 
 #
 # multilinear extensions
@@ -460,36 +463,35 @@ end
 _length(x) = 1
 _length(a::AbstractLinear) = length(a)
 
-@generated function multilin(f::F, addto, a::Vararg{Any,N};
+@generated function multilinear(f1::F1, f::F, a::Vararg{Any,N};
+        coefftype = Sign,
+        addto = zero(linear_return_type(f1, unval(coefftype), map(typeof, a)...)),
         coeff = ONE,
         is_filtered::Bool = false,
         sizehint::Bool = true,
-        kw...) where {F,N}
+        kw...) where {F1,F,N}
     N = length(a)
     TS = map(_termtype, a)
     quote
         is_filtered || all(linear_filter, a) || return addto
-        has_ac = has_addto_coeff(f, $TS...)
-        fkw = kw
-        if has_isfiltered(f, $TS...)
-            fkw = push_kw(fkw; is_filtered = true)
-        end
-        if has_sizehint(f, $TS...)
-            fkw = push_kw(fkw; sizehint)
-        elseif sizehint # && !(return_type(f, $TS...) <: AbstractLinear)
+        if !has_sizehint(f, $TS...) && sizehint
             l = prod(_length, a; init = 1)
             sizehint!(addto, length(addto)+l)
+        end
+        g = if has_char2(addto)
+            TryLinearKw(f; coefftype = Val(_coefftype(addto)), sizehint, is_filtered = true, kw...)
+        else
+            TryLinearKw(f; sizehint, is_filtered = true, kw...)
         end
         @nexprs(1, i -> cc_{$N+i} = coeff)  # initialize cc_{N+1}
         @nloops($N, xc, i -> a[i] isa AbstractLinear ? a[i] : ((a[i], ONE),), i -> begin
             x_i, c_i = xc_i
             cc_i = c_i*cc_{i+1}
         end, begin
-            if has_ac # || return_type(f, $TS...) <: AbstractLinear
-                # has_ac || println("$f: ", $TS)
-                @ncallkw($N, f, (addto, coeff = cc_1, fkw...), x)
+            if has_addto_coeff(f, $TS...)
+                @ncallkw($N, g, (addto, coeff = cc_1), x)
             else
-                addmul!(addto, @ncallkw($N, f, fkw, x), cc_1; is_filtered = keeps_filtered(f, $TS...))
+                addmul!(addto, @ncall($N, g, x), cc_1; is_filtered = keeps_filtered(f, $TS...))
             end
         end)
         addto
@@ -533,7 +535,7 @@ See also [`@linear`](@ref), [`@linear_kw`](@ref), [`$(@__MODULE__).DefaultCoefft
 ## Bilinear extension of a function returning a term
 
 ```jldoctest multilinear
-julia> f(x::Char, y::String) = x*y; @multilinear f
+julia> f(x::Char, y::String) = x*y; @multilinear f;
 
 julia> a, b = Linear('x' => 1, 'y' => 2), Linear("z" => 1.0, "w" => -1.0)
 (Linear{Char, Int64}('x' => 1, 'y' => 2), Linear{String, Float64}("w" => -1.0, "z" => 1.0))
@@ -554,7 +556,7 @@ Linear{String, Float64} with 4 terms:
 ## Bilinear extension of a function returning a linear combination
 
 ```jldoctest multilinear
-julia> f(x::Char, y::String) = Linear(x*y => BigInt(1), y*x => BigInt(-1)); @multilinear f
+julia> f(x::Char, y::String) = Linear(x*y => BigInt(1), y*x => BigInt(-1)); @multilinear f;
 
 julia> f(a, b)   # same a and b as before
 Linear{String, BigFloat} with 8 terms:
@@ -567,7 +569,7 @@ Linear{String, BigFloat}
 ## Multilinear extension of a function
 
 ```jldoctest multilinear
-julia> g(xs::Union{Char,String}...) = *(xs...); @multilinear g
+julia> g(xs::Union{Char,String}...) = *(xs...); @multilinear g;
 
 julia> g(a)   # same a and b as before
 Linear{String, Int64} with 2 terms:
@@ -585,7 +587,7 @@ Linear{String, Float64} with 8 terms:
 ## Multilinear extension using the two-argument version of `@multilinear`
 
 ```jldoctest multilinear
-julia> @multilinear(h, *)
+julia> @multilinear(h, *);
 
 julia> h(a, b; coeff = 2)   # same a and b as before
 Linear{String, Float64} with 4 terms:
@@ -596,12 +598,16 @@ macro multilinear(f, f0 = f)
     F = Meta.isexpr(f, :(::), 1) ? Expr(:(::), :f, esc(f.args[1])) : esc(f)
     FT = Meta.isexpr(f, :(::)) ? F : :(f::typeof($F))
     F0 = f0 == f ? F : esc(f0)
+    emptyf = f isa Symbol ? :(function $F end) : :()
 
     if f0 == f
         traits = quote end
     else
         traits = quote
-            $(@__MODULE__).hastrait($FT, ::Val, types::Type...) = true
+            function $(@__MODULE__).hastrait($FT, val::Val, types::Type...)
+               any(T -> T <: AbstractLinear, types) || hastrait($F0, val, types...)
+            end
+
             $(@__MODULE__).keeps_filtered($FT, types::Type...) = keeps_filtered($F0, types...)
         end
     end
@@ -612,8 +618,7 @@ macro multilinear(f, f0 = f)
                 if any(T -> T <: AbstractLinear, types)
                     invoke(return_type, Tuple{Any,Vararg{Type}}, $F0, types...)
                 else
-                    LU = return_type($F0, types...)
-                    LU <: AbstractLinear ? LU : Linear1{LU,DefaultCoefftype}
+                    return_type($F0, types...)
                 end
             end
         end
@@ -623,17 +628,16 @@ macro multilinear(f, f0 = f)
 
     # TODO: does @propagate_inbounds make sense?
     quote
-        function $F end
-
+        $emptyf
         $rt_ex
-
         $traits
 
-        @propagate_inbounds function $F(xs...;
-                coefftype = Sign,
-                addto = zero(linear_return_type($F, unval(coefftype), map(typeof, xs)...)),
-                kw...)
-            multilin($F0, addto, xs...; kw...)
+        @propagate_inbounds function $F(xs...; kw...)
+            if any(x -> x isa AbstractLinear, xs)
+                multilinear($F, $F0, xs...; kw...)
+            else
+                $F0(xs...; kw...)
+            end
         end
     end
 end
@@ -833,15 +837,15 @@ julia> s = "ab";
 
 julia> coprod(s)
 Linear{Tensor{Tuple{String, String}}, Int64} with 3 terms:
-""⊗"ab"+"a"⊗"b"+"ab"⊗""
+"a"⊗"b"+"ab"⊗""+""⊗"ab"
 
 julia> p = s |> coprod |> Tensor(coprod, identity) |> flatten
 Linear{Tensor{Tuple{String, String, String}}, Int64} with 6 terms:
-""⊗"ab"⊗""+""⊗"a"⊗"b"+"a"⊗"b"⊗""+""⊗""⊗"ab"+"a"⊗""⊗"b"+"ab"⊗""⊗""
+"a"⊗"b"⊗""+""⊗""⊗"ab"+""⊗"a"⊗"b"+"a"⊗""⊗"b"+"ab"⊗""⊗""+""⊗"ab"⊗""
 
 julia> q = s |> coprod |> Tensor(identity, coprod) |> flatten
 Linear{Tensor{Tuple{String, String, String}}, Int64} with 6 terms:
-""⊗"ab"⊗""+""⊗"a"⊗"b"+"a"⊗"b"⊗""+""⊗""⊗"ab"+"a"⊗""⊗"b"+"ab"⊗""⊗""
+"a"⊗"b"⊗""+""⊗""⊗"ab"+""⊗"a"⊗"b"+"a"⊗""⊗"b"+"ab"⊗""⊗""+""⊗"ab"⊗""
 
 julia> p == q  # coproduct is coassociative
 true

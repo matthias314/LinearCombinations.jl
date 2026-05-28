@@ -29,14 +29,6 @@ element_type(g::Base.Generator) = return_type(g.f, element_type(g.iter))
 
 error_missing(::Type{T}) where T = error("implementation missing for type ", T)
 
-macro Function(T)
-# turns a type (constructor) into a function
-    :( (x...; kw...) -> $(esc(T))(x...; kw...) )
-end
-
-# function evaluation
-Eval(f, x...; kw...) = f(x...; kw...)
-
 # unwrapping Val
 """
     $(@__MODULE__).unval(x)
