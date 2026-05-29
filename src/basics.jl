@@ -282,8 +282,34 @@ Return the degree of `x`. The default value of `deg(x)` is `0`.
 (More precisely, it is `$(@__MODULE__).Zero()`, which behaves like `0`.)
 
 See also [`deg(::AbstractTensor)`](@ref), [`$(@__MODULE__).Zero`](@ref).
+
+# Examples
+
+The degree of a `GradedString` (created with the `gr""` string macro) is its length.
+```jldoctest
+julia> using LinearCombinations.TestHelpers: GradedString, @gr_str
+
+julia> deg(*)
+LinearCombinations.Zero()
+
+julia> gr"xy" |> deg
+2
+
+julia> gr"xy" * gr"z" |> deg
+3
+
+julia> Base.Fix1(*, gr"xy") |> deg
+2
+
+julia> Base.Fix1(*, gr"xy") ∘ Base.Fix1(*, gr"z") |> deg
+3
+
+julia> deg($(@__MODULE__).diff)
+-1
+```
 """
 deg(_) = Zero()
 
 deg(f::ComposedFunction) = deg(f.outer) + deg(f.inner)
-# TODO: can one do this more efficiently?
+
+deg(f::@static VERSION > v"1.13-" ? Base.Fix : Union{Fix1,Base.Fix2}) = deg(f.f) + deg(f.x)
