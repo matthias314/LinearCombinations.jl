@@ -115,14 +115,6 @@ See also [`$(@__MODULE__).linear_filter`](@ref).
 keeps_filtered(f, ::Type...) = false
 keeps_filtered(::typeof(identity), ::Type) = true
 
-function addtraits!(ex, def::Dict, traits)
-    def[:name] = :($(@__MODULE__).hastrait)
-    tunion = Expr(:curly, :Union, (Expr(:curly, :Val, QuoteNode(t)) for t in traits)...)
-    def[:args][2] = Expr(:(::), tunion)
-    push!(ex.args, esc(combinedef(def)))
-    ex
-end
-
 """
     @linear_kw function def
 
@@ -186,38 +178,51 @@ julia> has_coefftype(g, Char), has_addto_coeff(g, Char), has_sizehint(g, Char)
 ```
 """
 macro linear_kw(ex)
-    # skip macro calls
-    ex1 = ex
-    while Meta.isexpr(ex1, :macrocall)
-        ex1 = ex1.args[end]
-    end
+    linear_kw(__source__, ex)
+end
 
-    def = splitdef(ex1)
+function linear_kw(__source__, ex, origex = ex, innermacro = Expr(:block, :nothing))
+    # preserve other macros
+    Meta.isexpr(ex, :macrocall) && return linear_kw(__source__, ex.args[end], origex, ex)
+
+    def = splitdef(ex)
     f = def[:name]
     FT = isexpr(f, :(::)) ? f.args[end] : :(typeof($f))
     kwnames = map(kw -> splitarg(kw)[1], def[:kwargs])
     args = map(def[:args]) do ex
         name, type, slurp, default = splitarg(ex)
         default === nothing || error("default argument values not supported")
-        combinearg(nothing, :(Type{<:$type}), slurp, nothing)
+        newtype = if type == :Vararg
+            # Vararg
+            :(Vararg{Type})
+        elseif Meta.isexpr(type, :curly) && type.args[1] == :Vararg
+            # Vararg{T} or Vararg{T,N}
+            :(Vararg{Type{<:$(type.args[2])}, $(type.args[3:end]...)})
+        else
+            :(Type{<:$type})
+        end
+        combinearg(nothing, newtype, slurp, nothing)
     end
     def[:args] = prepend!(args::Vector, (:(::$FT), :(::Val)))   # "::Vector" for JET analysis
     def[:kwargs] = []
 
-    traits = Symbol[]
-    notraits = Symbol[]
+    traits = QuoteNode[]
     for t in (:coefftype, :is_filtered, :sizehint)
-        push!(t in kwnames ? traits : notraits, t)
+        t in kwnames && push!(traits, QuoteNode(t))
     end
-    push!(:addto in kwnames && :coeff in kwnames ? traits : notraits, :addto_coeff)
+    :addto in kwnames && :coeff in kwnames && push!(traits, QuoteNode(:addto_coeff))
 
-    ex2 = Expr(:block, :(f = Core.@__doc__ $(esc(ex))))
-    def[:body] = :true
-    isempty(traits) || addtraits!(ex2, def, traits)
-    def[:body] = :false
-    isempty(notraits) || addtraits!(ex2, def, notraits)
-    push!(ex2.args, :f)
-    ex2
+    innermacro.args[end] = ex
+    newex = Expr(:block, :(f = Core.@__doc__ $(esc(origex))))
+
+    trait = gensym(:trait)
+    def[:name] = :($(@__MODULE__).hastrait)
+    def[:args][2] = :(::Val{$trait})
+    def[:whereparams] = (def[:whereparams]..., trait)
+    def[:body] = MacroTools.@qq begin $trait in ($(traits...),) end  # `@qq` adds line numbers
+    push!(newex.args, esc(combinedef(def)))
+    push!(newex.args, :f)
+    newex
 end
 
 """
