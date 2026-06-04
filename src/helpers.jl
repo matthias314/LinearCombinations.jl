@@ -60,6 +60,30 @@ Base.:*(x::ErrorFilter, y) = ErrorFilter(x.x*y)
 Base.:*(x, y::ErrorFilter) = ErrorFilter(x*y.x)
 Base.:*(x::ErrorFilter, y::ErrorFilter) = ErrorFilter(x.x*y.x)
 
+# KeepsFiltered
+
+export KeepsFiltered
+
+struct KeepsFiltered{F}
+    f::F
+end
+
+struct LinearCallable{W,F}
+    f::F
+    LinearCallable{W}(f::F) where {W,F} = new{W,F}(f)
+    LinearCallable{W}(::Type{T}) where {W,T} = new{W,Type{T}}(T)
+end
+
+(f::LinearCallable)(args...; kw...) = f.f(args...; kw...)
+
+@multilinear f::KeepsFiltered LinearCallable{KeepsFiltered}(f.f)
+
+hastrait(f::LinearCallable{KeepsFiltered}, trait::Val, types::Type...) = hastrait(f.f, trait, types...)
+
+keeps_filtered(f::LinearCallable{KeepsFiltered}, ::Type...) = true
+
+return_type(f::LinearCallable{KeepsFiltered}, types::Type...) = return_type(f.f, types...)
+
 # BasisLinear
 
 export BasicLinear
