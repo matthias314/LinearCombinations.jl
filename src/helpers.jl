@@ -201,4 +201,34 @@ Base.getindex(gr::GradedString, ii::AbstractVector{<:Integer}) = GradedString(gr
 
 Base.:^(gr::GradedString, k::Integer) = GradedString(repeat(gr.x, k))
 
+export ErrorGraded, DegreeException
+
+const ErrorGraded{T} = Graded{T,Missing}
+
+ErrorGraded(x) = Graded(x, missing)
+
+struct DegreeException end
+
+deg(gr::ErrorGraded) = throw(DegreeException())
+
+return_type(::typeof(deg), ::Type{<:ErrorGraded}) = Int
+# needed to bypass exception
+
+function (grc::GradedCallable{<:ErrorGraded})(args::Graded...; kw...)
+    Fix2(Graded, missing)(grc.gr.x(map(ungraded, args)...; kw...))
+end
+
+function return_type(grc::GradedCallable{<:ErrorGraded}, types::Type...)
+    LU = return_type(grc.gr.x, map(ungraded, types)...)
+    GRU = Graded{_termtype(LU),Missing}
+    if LU <: Linear
+        Linear{GRU, _coefftype(LU)}
+    elseif LU <: Linear1
+        Linear1{GRU, _coefftype(LU)}
+    else
+        @assert !(LU <: AbstractLinear) "linear type $LU not supported"
+        GRU
+    end
+end
+
 end # module TestHelpers
