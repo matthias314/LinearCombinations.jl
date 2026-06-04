@@ -313,7 +313,7 @@ end
 
 function return_type(rg::Regroup, T::Type{<:AbstractTensor})
     @foldable
-    regroup_check_arg(AbstractTensor, regroup_a(rg), T) || return Union{}
+    regroup_check_arg(AbstractTensor, regroup_a(rg), T) || return ReturnType.NoReturn
     SE = regroup_tensor_signexp_type(rg, T)
     U = regroup_callable(rg, (TS...) -> Tensor{Tuple{TS...}}, T)
     SE === Zero && return U

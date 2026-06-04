@@ -4,6 +4,8 @@
 
 module ReturnType
 
+abstract type NoReturn end
+
 @inline function return_type(f::F, types::Type...; kw...) where F
     kw = NamedTuple(kw)
     kwtypes = values(kw)
@@ -15,7 +17,7 @@ module ReturnType
     end
     all(isconcretetype, types) && all(isconcretetype, kwtypes) && !isconcretetype(T) &&
         @debug "inferred return type not concrete" T, f, types, kw
-    T
+    T === Union{} ? NoReturn : T
 end
 
 end
