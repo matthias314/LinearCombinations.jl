@@ -264,7 +264,6 @@ end
 
 _coefftype(::Type{<:AbstractLinear{T,R}}) where {T,R} = R
 _coefftype(::T) where T = _coefftype(T)
-_coefftype(::Missing) = missing
 
 function ==(a::AbstractLinear, b::AbstractLinear)
     length(a) == length(b) && all(hashed_iter(a)) do (x, c)
@@ -515,7 +514,7 @@ spanned by all possible terms, but rather in the quotient by the subspace (or su
 for which `linear_filter` returns `false`. Setting coefficients for terms that are divided out is allowed,
 but has no effect.
 
-The default return value of `linear_fiilter` is `true` for all arguments, so that nothing is divided out.
+The default return value of `linear_filter` is `true` for all arguments, so that nothing is divided out.
 
 See also [`keeps_filtered`](@ref), [`$(@__MODULE__).termcoeff`](@ref).
 
