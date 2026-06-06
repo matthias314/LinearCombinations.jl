@@ -364,21 +364,11 @@ macro linear(f)
 end
 
 #
-# has_char2 including linear types, addto and coefftype
+# has_char2 for linear types and `Val` coefftypes
 #
 
 has_char2(::Type{L}) where {T,R,L<:AbstractLinear{T,R}} = has_char2(R)
-has_char2(::Type{Union{}}) = error("not defined")   # for JET analysis
-
 has_char2(::Val{R}) where R <: Type = has_char2(R)
-
-Base.@assume_effects :total function has_char2(types::Type...; kw...)
-    R = _coefftype(get(kw, :addto, missing))
-    R !== missing && return has_char2(R)
-    R = get(kw, :coefftype, missing)
-    R !== missing && return has_char2(R)
-    any(has_char2, types)
-end
 
 #
 # new type for linear extension
