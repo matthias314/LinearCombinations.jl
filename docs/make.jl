@@ -8,11 +8,6 @@ const doctestsetup = quote
     if LinearCombinations.termcoeff('X' => 1) != ('X' => 1)
         LinearCombinations.termcoeff(xc::Pair{Char}) = xc
     end
-    if deg("x") != 0
-        LinearCombinations.deg(x::String) = LinearCombinations.Zero()
-    end
-    # function f end
-    # Base.repr(::typeof(f)) = "f"
 end
 
 DocMeta.setdocmeta!(LinearCombinations, :DocTestSetup, doctestsetup; recursive = true)
@@ -29,5 +24,5 @@ makedocs(sitename = "LinearCombinations.jl",
         "internals.md",
     ],
     format = Documenter.HTML(),
-    doctest = isempty(ARGS) ? true : Symbol(ARGS[1]),  # "only" and "fix" are useful
+    doctest = isempty(ARGS) ? true : Symbol(ARGS[1]),  # "false", "only" and "fix" are useful
     warnonly = true)
