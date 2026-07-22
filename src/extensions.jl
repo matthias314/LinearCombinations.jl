@@ -589,6 +589,11 @@ macro multilinear(f, f0 = f)
     FT = Meta.isexpr(f, :(::)) ? F : :(f::typeof($F))
     F0 = f0 == f ? F : esc(f0)
     emptyf = f isa Symbol ? :(function $F end) : :()
+    callf0 = if f0 != f
+        :($F0(xs...; kw...))
+    else
+        :(throw(MethodError($F, xs)))
+    end
 
     if f0 == f
         traits = quote end
@@ -626,7 +631,7 @@ macro multilinear(f, f0 = f)
             if any(x -> x isa AbstractLinear, xs)
                 multilinear($F, $F0, xs...; kw...)
             else
-                $F0(xs...; kw...)
+                $callf0
             end
         end
     end
