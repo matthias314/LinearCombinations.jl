@@ -113,7 +113,6 @@ Linear{Tensor{Tuple{Char, Char}}, Int64} with 4 terms:
 We finally take the tensor product of the functions `f` and `g` and apply it to `a⊗b`.
 ```julia
 julia> f⊗g
-Linear{Tensor{Tuple{typeof(f), typeof(g)}}, Int64} with 1 term:
 f⊗g
 
 julia> (f⊗g)('x'⊗'z')
