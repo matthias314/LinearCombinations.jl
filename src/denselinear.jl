@@ -381,23 +381,7 @@ end
 
 coeffs(a::DenseLinear) = Iterators.filter(!iszero, a.v)
 
-#=
-function iterate(a::DenseLinear{T,R}, ss...) where {T,R}
-    iis = iterate(CartesianIndices(a.v), ss...)
-    while iis !== nothing
-        ii, s = iis
-        c = @inbounds a.v[ii]
-        if !iszero(c)
-            @inbounds x = a.b[ii]
-            return (Pair{T,R}(x, c), s)
-        end
-        iis = iterate(CartesianIndices(a.v), s)
-    end
-    nothing
-end
-=#
-
-function iterate(a::DenseLinear{T,R}, state...) where {T,R}
+@inline function iterate(a::DenseLinear{T,R}, state...) where {T,R}
     iterate((Pair{T,R}(x, c) for (x, c) in zip(a.b, a.v) if !iszero(c)), state...)
 end
 
