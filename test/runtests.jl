@@ -20,9 +20,8 @@ module LinearTest
     @linear_kw function g(x::T;
             coefftype = Float64,
             addto = zero(Linear{T, unval(coefftype)}),
-            coeff = ONE,
             is_filtered = false) where T
-        addmul!(addto, x, 2*coeff; is_filtered)
+        addmul!(addto, x, 2; is_filtered)
     end
 
     LinearCombinations.return_type(::typeof(g), ::Type{T}) where T <: Union{Char,String,ErrorFilter} = Linear{T,Float64}
@@ -343,7 +342,7 @@ end
 
 @testset "@linear_kw" begin
     import .LinearKwTest as L
-    using ..LinearCombinations: has_coefftype, has_addto_coeff, has_isfiltered, has_sizehint
+    using ..LinearCombinations: has_coefftype, has_addto, has_addto_coeff, has_isfiltered, has_sizehint
 
     function returns_const(ct::Pair{Core.CodeInfo}, val)
         code = first(ct).code
@@ -353,12 +352,15 @@ end
 
     @test returns_const(@code_typed(has_coefftype(L.f1, Some{Char})), true)
     @test returns_const(@code_typed(has_coefftype(L.f1, Some{String})), false)
+    @test returns_const(@code_typed(has_addto(L.f1, Some{Char})), false)
     @test returns_const(@code_typed(has_addto_coeff(L.f1, Some{Char})), false)
     @test returns_const(@code_typed(has_isfiltered(L.f1, Some{Char})), true)
     @test returns_const(@code_typed(has_sizehint(L.f1, Some{Char})), false)
 
     @test returns_const(@code_typed(has_coefftype(L.f2, Some{Char})), false)
+    @test returns_const(@code_typed(has_addto(L.f2, Some{Char})), true)
     @test returns_const(@code_typed(has_addto_coeff(L.f2, Some{Char})), true)
+    @test returns_const(@code_typed(has_addto(L.f2, Some{String})), false)
     @test returns_const(@code_typed(has_addto_coeff(L.f2, Some{String})), false)
     @test returns_const(@code_typed(has_isfiltered(L.f2, Some{Char})), false)
     @test returns_const(@code_typed(has_sizehint(L.f2, Some{Char})), true)
@@ -370,6 +372,7 @@ end
         else
             @test returns_const(@code_typed(has_coefftype(f, String)), false)
         end
+        @test returns_const(@code_typed(has_addto(f, Char)), false)
         @test returns_const(@code_typed(has_addto_coeff(f, Char)), false)
         @test returns_const(@code_typed(has_isfiltered(f, Char)), true)
         @test returns_const(@code_typed(has_sizehint(f, Char)), false)
@@ -380,6 +383,7 @@ end
         else
             @test returns_const(@code_typed(has_coefftype(f, String, Char)), false)
         end
+        @test returns_const(@code_typed(has_addto(f, Char, Char)), false)
         @test returns_const(@code_typed(has_addto_coeff(f, Char, Char)), false)
         @test returns_const(@code_typed(has_isfiltered(f, Char, Char)), true)
         @test returns_const(@code_typed(has_sizehint(f, Char, Char)), false)
@@ -999,10 +1003,9 @@ end
 function LinearCombinations.diff(grs::GradedString;
         coefftype = Int,
         addto = zero(Linear{GradedString,unval(coefftype)}),
-        coeff = 1,
         is_filtered = false)
     if grs != gr"" && grs[1] != 'd'
-        addmul!(addto, gr"d" * grs, coeff)
+        add!(addto, gr"d" * grs)
     end
     addto
 end

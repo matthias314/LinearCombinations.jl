@@ -11,4 +11,5 @@ LinearCombinations.unval
 LinearCombinations.Zero
 LinearCombinations.LinearStyle
 LinearCombinations.show_summand
+LinearCombinations.AddToMul
 ```

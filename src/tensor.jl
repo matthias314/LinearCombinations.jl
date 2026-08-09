@@ -376,9 +376,8 @@ transpose(t::AbstractTensor{<:Tuple{Vararg{AbstractTensor}}})
 @linear_kw function transpose_sign(t::T;
         coefftype = Sign,
         addto = zero(linear_return_type(transpose, unval(coefftype), T)),
-        coeff = one(DefaultCoefftype),
         is_filtered::Bool = false) where T
-    c = has_char2(addto) ? coeff : withsign(transpose_signexp(t), coeff)
+    c = has_char2(addto) ? ONE : withsign(transpose_signexp(t), ONE)
     addmul!(addto, transpose_nosign(t), c; is_filtered)
 end
 
@@ -509,6 +508,7 @@ end
 
 # TODO: other keywords: also sizehint !?
 hastrait(::typeof(coprod), ::Val{:coefftype}, ::Type{AbstractTensor}) = true
+hastrait(::typeof(coprod), ::Val{:addto}, ::Type{AbstractTensor}) = true
 hastrait(::typeof(coprod), ::Val{:addto_coeff}, ::Type{AbstractTensor}) = true
 hastrait(::typeof(coprod), ::Val{:isfiltered}, ::Type{AbstractTensor}) = true
 
@@ -806,24 +806,24 @@ end
 @linear_kw function tensor_callable_linear(tf::AbstractTensor{<:NTuple{N,Any}}, txs::Vararg{AbstractTensor{<:NTuple{N,Any}},M};
         coefftype = Val(Sign),
         addto = zero(linear_return_type(tf, unval(coefftype), map(typeof, txs)...)),
-        coeff = ONE,
         is_filtered::Bool = false) where {N,M}
     R = _coefftype(addto)
     inner_kw = has_char2(R) ? (; coefftype = Val(R), is_filtered) : (; is_filtered)
     tc = Tuple(transpose_nosign(Tensor((tf, txs...))))
     ty = map(TensorSplat(TryLinearKw(Eval; inner_kw...)), tc)
 
-    c = has_char2(R) ? coeff : withsign(transpose_signexp(Tensor((tf, txs...))), coeff)
+    c = has_char2(R) ? ONE : withsign(transpose_signexp(Tensor((tf, txs...))), ONE)
 
     is_filtered = is_filtered && all(map(Tuple(tf), tc, ty) do f, tx, y
             y isa AbstractLinear || keeps_filtered(f, map(typeof, Tuple(tx)[2:end])...)
     end)
 
     if any(y -> y isa AbstractLinear, ty)
-        tensor(ty...; addto, coeff = c, is_filtered)
+        tensor(ty...; addto = AddToMul(addto, c), is_filtered)
     else
         addmul!(addto, Tensor(ty), c; is_filtered)
     end
+    addto
 end
 
 function return_type(tf::AbstractTensor{<:NTuple{N,Any}}, types::Vararg{Type{<:AbstractTensor{<:NTuple{N,Any}}}}) where N
@@ -860,7 +860,7 @@ function tensor_diff(addto, coeff, x, dx, degx, sizehint, is_filtered)
     coeff = withsign(degx1, coeff)
     k = length(x)-length(dx)
     if dx1 isa AbstractLinear
-        tensor(x[1:k-1]..., dx1, x[k+1:end]...; addto, coeff, sizehint, is_filtered)
+        tensor(x[1:k-1]..., dx1, x[k+1:end]...; addto = AddToMul(addto, coeff), sizehint, is_filtered)
     else # in this case `diff` is probably not a differential ...
         addmul!(addto, Tensor((x[1:k-1]..., dx1, x[k+1:end]...)), coeff; is_filtered)
     end
@@ -903,7 +903,6 @@ gr"δx"⊗gr"yy"⊗gr"zzz"-gr"x"⊗gr"δyy"⊗gr"zzz"-gr"x"⊗gr"yy"⊗gr"δzzz"
 @linear_kw function diff(t::T;
         coefftype = Sign,
         addto = zero(linear_return_type(diff, unval(coefftype), T)),
-        coeff = ONE,
         is_filtered::Bool = false,
         sizehint::Bool = true) where T <: AbstractTensor
 
@@ -929,7 +928,7 @@ gr"δx"⊗gr"yy"⊗gr"zzz"-gr"x"⊗gr"δyy"⊗gr"zzz"-gr"x"⊗gr"yy"⊗gr"δzzz"
         degx = (Zero(), map(deg, x[1:end-1])...)
     end
 
-    tensor_diff(addto, coeff, x, dx, degx, sizehint, is_filtered)
+    tensor_diff(addto, ONE, x, dx, degx, sizehint, is_filtered)
 end
 
 function return_type(::typeof(diff), T::Type{<:Tensor})

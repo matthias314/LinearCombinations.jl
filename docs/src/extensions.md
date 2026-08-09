@@ -32,6 +32,7 @@ linear_filter
 keeps_filtered
 LinearCombinations.termcoeff
 LinearCombinations.has_coefftype
+LinearCombinations.has_addto
 LinearCombinations.has_addto_coeff
 LinearCombinations.has_isfiltered
 LinearCombinations.has_sizehint

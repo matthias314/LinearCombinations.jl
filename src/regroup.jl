@@ -280,10 +280,9 @@ regroup_tensor_nosign(rg, t) = regroup_callable(rg, Tensor∘tuple, t)
 @linear_kw function regroup_tensor_sign(rg, t::T;
         coefftype = Sign,
         addto = zero(linear_return_type(rg, unval(coefftype), T)),
-        coeff = ONE,
         is_filtered::Bool = false) where T <: AbstractTensor
     rgt = regroup_tensor_nosign(rg, t)
-    c = has_char2(addto) ? coeff : withsign(regroup_tensor_signexp(rg, t), coeff)
+    c = has_char2(addto) ? ONE : withsign(regroup_tensor_signexp(rg, t), ONE)
     addmul!(addto, rgt, c; is_filtered)
 end
 

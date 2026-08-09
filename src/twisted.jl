@@ -131,9 +131,10 @@ end
 
 @linear_kw function diff(t::AbstractTwistedTensor;
         coefftype = DefaultCoefftype,
-        addto = zero(twistedtensor_diff_type(unval(coefftype), t)),
-        coeff = ONE)
-    addmul!(addto, convert(Tensor, t) |> diff |> twistedtensor(t), coeff)
-    addmul!(addto, t |> tensor_twisting, t isa LeftTwistedTensor ? coeff : -coeff)
+        addto = zero(twistedtensor_diff_type(unval(coefftype), t)))
+    b = convert(Tensor, t) |> diff |> twistedtensor(t)
+    add!(addto, b)
+    c = tensor_twisting(t)
+    t isa LeftTwistedTensor ? add!(addto, c) : sub!(addto, c)
     return addto
 end

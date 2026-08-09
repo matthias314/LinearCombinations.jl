@@ -53,7 +53,7 @@ Linear{Char, Int64} with 2 terms:
 2*'Y'+'X'
 ```
 Another linear function, this time mapping terms to linear combinations.
-(A more efficient implementation of such a function would use the keyword arguments `addto` and `coeff`,
+(A more efficient implementation of such a function would use the keyword argument `addto`,
 see [`@linear_kw`](https://matthias314.github.io/LinearCombinations.jl/stable/extensions/#LinearCombinations.@linear_kw).)
 ```julia
 julia> @linear g; g(x::Char) = Linear(f(x) => 1, x => -1)

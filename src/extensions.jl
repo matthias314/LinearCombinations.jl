@@ -44,11 +44,26 @@ this keyword known to the $(@__MODULE__) package.
 
 See also
 [`@linear_kw`](@ref),
-[`$(@__MODULE__).has_addto_coeff`](@ref),
+[`$(@__MODULE__).has_addto`](@ref),
 [`$(@__MODULE__).has_isfiltered`](@ref),
 [`$(@__MODULE__).has_sizehint`](@ref).
 """
 has_coefftype(f, types::Type...) = hastrait(f, Val(:coefftype), types...)
+
+"""
+    $(@__MODULE__).has_addto(f, types...) -> Bool
+
+Return `true` if the method for `f` with signature given by `types` is known
+to support the keyword argument `addto`. The macro `@linear_kw` is used to make
+this keyword known to the $(@__MODULE__) package.
+
+See also
+[`@linear_kw`](@ref),
+[`$(@__MODULE__).has_coefftype`](@ref),
+[`$(@__MODULE__).has_isfiltered`](@ref),
+[`$(@__MODULE__).has_sizehint`](@ref).
+"""
+has_addto(f, types::Type...) = hastrait(f, Val(:addto), types...)
 
 """
     $(@__MODULE__).has_addto_coeff(f, types...) -> Bool
@@ -57,11 +72,13 @@ Return `true` if the method for `f` with signature given by `types` is known
 to support the keyword arguments `addto` and `coeff`. The macro `@linear_kw` is used to make
 these keywords known to the $(@__MODULE__) package.
 
+!!! warning
+    `has_addto_coeff` is deprecated because the `coeff` keyword argument is not used anymore.
+    Use `has_addto` instead.
+
 See also
 [`@linear_kw`](@ref),
-[`$(@__MODULE__).has_coefftype`](@ref),
-[`$(@__MODULE__).has_isfiltered`](@ref),
-[`$(@__MODULE__).has_sizehint`](@ref).
+[`$(@__MODULE__).has_addto`](@ref).
 """
 has_addto_coeff(f, types::Type...) = hastrait(f, Val(:addto_coeff), types...)
 
@@ -78,7 +95,7 @@ this potentially expensive test can be skipped when evaluating `f`.
 See also
 [`@linear_kw`](@ref),
 [`$(@__MODULE__).has_coefftype`](@ref),
-[`$(@__MODULE__).has_addto_coeff`](@ref),
+[`$(@__MODULE__).has_addto`](@ref),
 [`$(@__MODULE__).has_sizehint`](@ref),
 [`keeps_filtered`](@ref).
 """
@@ -94,7 +111,7 @@ this keyword known to the $(@__MODULE__) package.
 See also
 [`@linear_kw`](@ref),
 [`$(@__MODULE__).has_coefftype`](@ref),
-[`$(@__MODULE__).has_addto_coeff`](@ref),
+[`$(@__MODULE__).has_addto`](@ref),
 [`$(@__MODULE__).has_isfiltered`](@ref),
 """
 has_sizehint(f, types::Type...) = hastrait(f, Val(:sizehint), types...)
@@ -120,12 +137,11 @@ keeps_filtered(::typeof(identity), ::Type) = true
 
 `@linear_kw` scans a function definition for the keywords `coefftype`, `addto`, `coeff`
 and `sizehint` and makes them known to the `$(@__MODULE__)` package. This allows to
-write performant code. Not all keywords have to present. However, `addto` and `coeff`
-only have an effect if used together.
+write performant code. Not all keywords have to present.
 
 See also
 [`$(@__MODULE__).has_coefftype`](@ref),
-[`$(@__MODULE__).has_addto_coeff`](@ref),
+[`$(@__MODULE__).has_addto`](@ref),
 [`$(@__MODULE__).has_isfiltered`](@ref),
 [`$(@__MODULE__).has_sizehint`](@ref),
 [`$(@__MODULE__).unval`](@ref).
@@ -138,15 +154,11 @@ f(x::Char) = Linear(uppercase(x) => 1, x => -1)
 
 @linear f
 
-using $(@__MODULE__): unval   # unwraps a Val argument
+@linear_broadcastable Char
 
 @linear_kw function g(x::Char;
-        coefftype = Int,
-        addto = zero(Linear{Char,unval(coefftype)}),
-        coeff = 1)
-    addmul!(addto, uppercase(x), coeff)
-    addmul!(addto, x, -coeff)
-    addto
+        addto = zero(Linear{Char,Int}))
+    addto .+= uppercase(x) .- x
 end
 
 @linear g
@@ -161,20 +173,20 @@ julia> a = Linear('x' => 1, 'y' => 2)
 Linear{Char, Int64} with 2 terms:
 'x'+2*'y'
 
-julia> f(a; coefftype = Float64, coeff = 2)
+julia> f(a; coefftype = Float64)
 Linear{Char, Float64} with 4 terms:
-4.0*'Y'-2.0*'x'-4.0*'y'+2.0*'X'
+2.0*'Y'-'x'-2.0*'y'+'X'
 
-julia> g(a; coefftype = Float64, coeff = 2)
+julia> g(a; coefftype = Float64)
 Linear{Char, Float64} with 4 terms:
-4.0*'Y'-2.0*'x'-4.0*'y'+2.0*'X'
+2.0*'Y'-'x'-2.0*'y'+'X'
 ```
-Test whether keywords have been registered:
+Test whether keyword has been registered:
 ```jldoctest addto-coeff
-julia> using $(@__MODULE__): has_coefftype, has_addto_coeff, has_sizehint
+julia> using $(@__MODULE__): has_coefftype, has_addto, has_sizehint
 
-julia> has_coefftype(g, Char), has_addto_coeff(g, Char), has_sizehint(g, Char)
-(true, true, false)
+julia> has_coefftype(g, Char), has_addto(g, Char), has_sizehint(g, Char)
+(false, true, false)
 ```
 """
 macro linear_kw(ex)
@@ -207,7 +219,7 @@ function linear_kw(__source__, ex, origex = ex, innermacro = Expr(:block, :nothi
     def[:kwargs] = []
 
     traits = QuoteNode[]
-    for t in (:coefftype, :is_filtered, :sizehint)
+    for t in (:coefftype, :is_filtered, :sizehint, :addto)
         t in kwnames && push!(traits, QuoteNode(t))
     end
     :addto in kwnames && :coeff in kwnames && push!(traits, QuoteNode(:addto_coeff))
@@ -224,6 +236,38 @@ function linear_kw(__source__, ex, origex = ex, innermacro = Expr(:block, :nothi
     push!(newex.args, :f)
     newex
 end
+
+# AddToMul wrapper
+
+"""
+    $(@__MODULE__).AddToMul{T, R, L <: AbstractLinear{T,R}, S} <: AbstractLinear{T,R}
+
+    AddToMul(a::AbstractLinear, c)
+
+This subtype of `AbstractLinear` only implements methods for `length`, `sizehint!`,
+`modifycoeff!` and `modifylinear!`. Hence one can use it as the first argument to
+`addmul!`, `add!`, `sub!`, `+=` and `-=`. Adding `b` to `AddToMul(a, c)` effectively
+adds `c*b` to `a`.
+"""
+struct AddToMul{T, R, L <: AbstractLinear{T,R}, S} <: AbstractLinear{T,R}
+    a::L
+    c::S
+end
+
+AddToMul(a::AddToMul, c) = AddToMul(a.a, c*a.c)
+
+length(a::AddToMul) = length(a.a)
+
+sizehint!(a::AddToMul) = (sizehint!(a.a), a)
+
+modifycoeff!(op::OP, a::AddToMul, x, c) where OP <: AddSub = (modifycoeff!(op, a.a, x, a.c*c); a)
+
+modifylinear!(op::OP, a::AddToMul, b::AbstractLinear) where OP <: AddSub = (modifylinear!(op, a.a, b, a.c); a)
+modifylinear!(op::OP, a::AddToMul, b::AbstractLinear, c) where OP <: AddSub = (modifylinear!(op, a.a, b, a.c*c); a)
+
+#
+# linear extension
+#
 
 """
     @linear f
@@ -257,6 +301,9 @@ The new method recognizes the following keyword arguments:
     This optional keyword argument allows to efficiently compute scalar multiples of `f(a)`. More precisely,
     `f(a; coeff = c)` returns `c*f(a)`, and `f(a; addto = b, coeff = c)` adds `c*f(a)` to `b` and returns
     this new value.
+
+!!! note
+    The keyword argument `coeff` may be removed in future versions.
 
 * `sizehint::Bool = true`:
     The new method for `f` may call `sizehint!` for `addto` to pre-allocate room for the new terms.
@@ -346,8 +393,8 @@ macro linear(f)
                     TryLinearKw($F; sizehint, is_filtered = true, kw...)
                 end
                 for (x, c) in a
-                    if has_addto_coeff($F, T)
-                        g(x; addto, coeff = coeff*c)
+                    if has_addto($F, T)
+                        g(x; addto = AddToMul(addto, coeff*c))
                     else
                         addmul!(addto, g(x), coeff*c)
                     end
@@ -478,8 +525,8 @@ _length(a::AbstractLinear) = length(a)
             x_i, c_i = xc_i
             cc_i = c_i*cc_{i+1}
         end, begin
-            if has_addto_coeff(f, $TS...)
-                @ncallkw($N, g, (addto, coeff = cc_1), x)
+            if has_addto(f, $TS...)
+                @ncallkw($N, g, (addto = AddToMul(addto, cc_1),), x)
             else
                 addmul!(addto, @ncall($N, g, x), cc_1; is_filtered = keeps_filtered(f, $TS...))
             end
