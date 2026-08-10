@@ -1,6 +1,6 @@
 name = "LinearCombinations"
 uuid = "67be3549-475c-46bf-8928-de3404d670d9"
-version = "0.5.1-DEV"
+version = "0.5.1"
 authors = ["matthias314"]
 
 [deps]
