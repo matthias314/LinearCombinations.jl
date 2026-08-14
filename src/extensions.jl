@@ -258,7 +258,7 @@ AddToMul(a::AddToMul, c) = AddToMul(a.a, c*a.c)
 
 length(a::AddToMul) = length(a.a)
 
-sizehint!(a::AddToMul) = (sizehint!(a.a), a)
+sizehint!(a::AddToMul) = (sizehint!(a.a); a)
 
 modifycoeff!(op::OP, a::AddToMul, x, c) where OP <: AddSub = (modifycoeff!(op, a.a, x, a.c*c); a)
 
