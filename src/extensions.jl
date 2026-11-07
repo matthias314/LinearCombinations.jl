@@ -136,11 +136,16 @@ keeps_filtered(f, ::Type...) = false
 keeps_filtered(::typeof(identity), ::Type) = true
 
 """
-    @linear_kw function def
+    @linear_kw function_def
+    @linear_kw function_sig
 
 `@linear_kw` scans a function definition for the keywords `coefftype`, `addto`, `coeff`
-and `sizehint` and makes them known to the `$(@__MODULE__)` package. This allows to
-write performant code. Not all keywords have to present.
+and `sizehint` and makes these traits known to the `$(@__MODULE__)` package. This allows to
+write performant code. Not all keywords have to be present.
+
+Sometimes one wants to make traits known without defining a method, for example for abstract
+types when the actual method definitions use more specific types. In this case one can use
+a function signature (for an already existing function).
 
 See also
 [`$(@__MODULE__).has_coefftype`](@ref),
@@ -149,7 +154,7 @@ See also
 [`$(@__MODULE__).has_sizehint`](@ref),
 [`$(@__MODULE__).unval`](@ref).
 
-# Example
+# Examples
 
 Consider the following two functions:
 ```jldoctest addto-coeff; output = false
@@ -191,6 +196,13 @@ julia> using $(@__MODULE__): has_coefftype, has_addto, has_sizehint
 julia> has_coefftype(g, Char), has_addto(g, Char), has_sizehint(g, Char)
 (false, true, false)
 ```
+Use of a function signature:
+```jldoctest addto-coeff
+julia> @linear_kw g(::AbstractString; coefftype)
+
+julia> has_coefftype(g, String), has_addto(g, String), has_sizehint(g, String)
+(true, false, false)
+```
 """
 macro linear_kw(ex)
     linear_kw(__source__, ex)
@@ -200,7 +212,7 @@ function linear_kw(__source__, ex, origex = ex, innermacro = Expr(:block, :nothi
     # preserve other macros
     Meta.isexpr(ex, :macrocall) && return linear_kw(__source__, ex.args[end], origex, ex)
 
-    def = splitdef(ex)
+    def = splitdef(isdef(ex) ? ex : :($ex = missing))
     f = def[:name]
     FT = isexpr(f, :(::)) ? f.args[end] : :(typeof($f))
     kwnames = map(kw -> splitarg(kw)[1], def[:kwargs])
@@ -229,7 +241,8 @@ function linear_kw(__source__, ex, origex = ex, innermacro = Expr(:block, :nothi
     :addto in kwnames && :coeff in kwnames && push!(traits, QuoteNode(:addto_coeff))
 
     innermacro.args[end] = ex
-    newex = Expr(:block, :(f = Core.@__doc__ $(esc(origex))))
+    newex = Expr(:block)
+    isdef(ex) && push!(newex.args, :(f = Core.@__doc__ $(esc(origex))))
 
     trait = gensym(:trait)
     def[:name] = :($(@__MODULE__).hastrait)
@@ -237,7 +250,8 @@ function linear_kw(__source__, ex, origex = ex, innermacro = Expr(:block, :nothi
     def[:whereparams] = (def[:whereparams]..., trait)
     def[:body] = MacroTools.@qq begin $trait in ($(traits...),) end  # `@qq` adds line numbers
     push!(newex.args, esc(combinedef(def)))
-    push!(newex.args, :f)
+
+    push!(newex.args, isdef(ex) ? :f : nothing)
     newex
 end
 

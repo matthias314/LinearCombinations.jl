@@ -75,6 +75,7 @@ module LinearKwTest
     @linear_kw g4(xs::Vararg{Char,N}; coefftype = Int, is_filtered = false) where N = Linear(string(xs...) => one(coefftype); is_filtered)
 
     @linear_kw h(@nospecialize(x::T); is_filtered = false) where T <: AbstractChar = x
+    @linear_kw h(x::T; is_filtered) where T <: AbstractString
 end
 
 @testset "Sign" begin
@@ -392,7 +393,8 @@ end
     end
 
     @test returns_const(@code_typed(has_isfiltered(L.h, Char)), true)
-    @test returns_const(@code_typed(has_isfiltered(L.h, String)), false)
+    @test returns_const(@code_typed(has_isfiltered(L.h, String)), true)
+    @test returns_const(@code_typed(has_isfiltered(L.h, Regex)), false)
 
     @test returns_const(@code_typed(has_coefftype(Tensor(L.f1, L.f1), Tensor{Tuple{Some{Char},Some{Char}}})), :true)
 
