@@ -21,10 +21,13 @@ function return_type(f::F, types::Type...) where F
 end
 
 function linear_return_type(f::F, ::Type{R}, types::Type...) where {F,R}
-    L = return_type(f, types...)
-    @assert L <: AbstractLinear
-    S = promote_type(coefftype(L), R)
-    change_coefftype(L, S)
+    TL = return_type(f, types...)
+    S = promote_type(R, map(_coefftype, types)...)
+    if TL <: AbstractLinear
+        change_coefftype(TL, promote_type(coefftype(TL), S))
+    else
+        Linear{TL,S}
+    end
 end
 
 # macros for linear extension
@@ -500,13 +503,13 @@ end
 _length(x) = 1
 _length(a::AbstractLinear) = length(a)
 
-@generated function multilinear(f1::F1, f::F, a::Vararg{Any,N};
+@generated function multilinear(f::F, a::Vararg{Any,N};
         coefftype = Sign,
-        addto = zero(linear_return_type(f1, unval(coefftype), map(typeof, a)...)),
+        addto = zero(linear_return_type(f, unval(coefftype), map(typeof, a)...)),
         coeff = ONE,
         is_filtered::Bool = false,
         sizehint::Bool = true,
-        kw...) where {F1,F,N}
+        kw...) where {F,N}
     N = length(a)
     TS = map(_termtype, a)
     quote
@@ -675,8 +678,10 @@ macro multilinear(f, f0 = f)
         $traits
 
         @propagate_inbounds function $F(xs...; kw...)
-            if any(x -> x isa AbstractLinear, xs)
-                multilinear($F, $F0, xs...; kw...)
+            if any(x -> x isa AbstractLinear, xs) ||
+                    (haskey(kw, :addto) && !has_addto($F0, map(typeof, xs)...)) ||
+                    (haskey(kw, :coeff) && !has_addto_coeff($F0, map(typeof, xs)...))
+                multilinear($F0, xs...; kw...)
             else
                 $callf0
             end

@@ -292,8 +292,16 @@ const ⊗ = tensor
 keeps_filtered(::ComposedFunction{<:Type{<:Tensor}, typeof(tuple)}, ::Type...) = true
 
 function return_type(::ComposedFunction{<:Type{<:Tensor}, typeof(tuple)}, types::Type...)
-    @assert !any(T -> T <: AbstractLinear, types)
-    Tensor{Tuple{types...}}
+    TT = map(_termtype, types)
+    U = Tensor{Tuple{TT...}}
+    R = promote_type(map(_coefftype, types)...)
+    if TT == types
+        U
+    elseif all(is_term_or_linear1, types)
+        Linear1{U, R == Sign ? DefaultCoefftype : R}
+    else
+        Linear{U, R == Sign ? DefaultCoefftype : R}
+    end
 end
 
 # needed to avoid methods for `DenseLinear` arguments
