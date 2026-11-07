@@ -204,7 +204,8 @@ function linear_kw(__source__, ex, origex = ex, innermacro = Expr(:block, :nothi
     f = def[:name]
     FT = isexpr(f, :(::)) ? f.args[end] : :(typeof($f))
     kwnames = map(kw -> splitarg(kw)[1], def[:kwargs])
-    args = map(def[:args]) do ex
+    args = map(def[:args]) do rawex
+        local ex = Meta.isexpr(rawex, :macrocall) && rawex.args[1] == :var"@nospecialize" ? rawex.args[3] : rawex
         name, type, slurp, default = splitarg(ex)
         default === nothing || error("default argument values not supported")
         newtype = if type == :Vararg
