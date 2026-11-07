@@ -257,6 +257,9 @@ struct AddToMul{T, R, L <: AbstractLinear{T,R}, S} <: AbstractLinear{T,R}
     c::S
 end
 
+show(io::IO, a::AddToMul) = print(io, styled"{warning:AddToMul}(", a.a, ", ", a.c, ')')
+show(io::IO, ::MIME"text/plain", a::AddToMul) = show(io, a)
+
 AddToMul(a::AddToMul, c) = AddToMul(a.a, c*a.c)
 
 length(a::AddToMul) = length(a.a)

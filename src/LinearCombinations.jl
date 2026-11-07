@@ -20,6 +20,8 @@ import Base: show, ==, hash, copy, copyto!, convert, promote_rule,
 
 using Core: Typeof
 
+using StyledStrings: @styled_str
+
 using StructEqualHash
 
 macro foldable()
