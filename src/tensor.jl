@@ -472,7 +472,7 @@ function *(ts::AbstractTensor{<:NTuple{N,Any}}...; kw...) where N
     f(ts...; kw...)
 end
 
-hastrait(::typeof(*), ::Val, ::Type{<:AbstractTensor{<:NTuple{N,Any}}}...) where N = true  # TODO: is "true" OK?
+@linear_kw *(::AbstractTensor{<:NTuple{N,Any}}...; coefftype, addto, is_filtered) where N
 
 one(::Type{<:AbstractTensor{T}}) where T <: Tuple = Tensor(map(one, fieldtypes(T)))
 
@@ -515,10 +515,7 @@ function coprod(t::AbstractTensor; kw...)
 end
 
 # TODO: other keywords: also sizehint !?
-hastrait(::typeof(coprod), ::Val{:coefftype}, ::Type{AbstractTensor}) = true
-hastrait(::typeof(coprod), ::Val{:addto}, ::Type{AbstractTensor}) = true
-hastrait(::typeof(coprod), ::Val{:addto_coeff}, ::Type{AbstractTensor}) = true
-hastrait(::typeof(coprod), ::Val{:isfiltered}, ::Type{AbstractTensor}) = true
+@linear_kw coprod(::AbstractTensor; coefftype, addto, coeff, isfiltered)
 
 #
 # tensor slurping and splatting

@@ -815,6 +815,7 @@ function (f::TryLinearKw)(x...; kw...)
 end
 
 hastrait(::TryLinearKw, ::Union{Val{:coefftype}, Val{:is_filtered}, Val{:sizehint}}, ::Type...) = true
+# @linear_kw (::TryLinearKw)(::Any...; coefftype, is_filtered, sizehint)
 hastrait(f::TryLinearKw, trait::Val, types::Type...) = hastrait(f.f, trait, types...)
 
 keeps_filtered(f::TryLinearKw, types::Type...) = keeps_filtered(f.f, types...)
