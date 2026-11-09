@@ -20,6 +20,8 @@ abstract type NoReturn end
     T === Union{} ? NoReturn : T
 end
 
+hasmethod(f, types...; kw...) = return_type(f, types...; kw...) !== NoReturn
+
 end
 
 element_type(itr) = eltype(itr)
