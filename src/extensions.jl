@@ -36,7 +36,7 @@ export @linear, @linear_kw, keeps_filtered
 
 using MacroTools
 
-Base.@nospecializeinfer hastrait(f, trait::Val, @nospecialize(types::Type...)) = false
+Base.@nospecializeinfer hastrait(f, trait::Val, types::Type...) = (@nospecialize; false)
 
 """
     $(@__MODULE__).has_coefftype(f, types...) -> Bool
@@ -51,7 +51,7 @@ See also
 [`$(@__MODULE__).has_isfiltered`](@ref),
 [`$(@__MODULE__).has_sizehint`](@ref).
 """
-has_coefftype(f, types::Type...) = hastrait(f, Val(:coefftype), types...)
+has_coefftype(f, types::Type...) = (@nospecialize; hastrait(f, Val(:coefftype), types...))
 
 """
     $(@__MODULE__).has_addto(f, types...) -> Bool
@@ -66,7 +66,7 @@ See also
 [`$(@__MODULE__).has_isfiltered`](@ref),
 [`$(@__MODULE__).has_sizehint`](@ref).
 """
-has_addto(f, types::Type...) = hastrait(f, Val(:addto), types...)
+has_addto(f, types::Type...) = (@nospecialize; hastrait(f, Val(:addto), types...))
 
 """
     $(@__MODULE__).has_addto_coeff(f, types...) -> Bool
@@ -83,7 +83,7 @@ See also
 [`@linear_kw`](@ref),
 [`$(@__MODULE__).has_addto`](@ref).
 """
-has_addto_coeff(f, types::Type...) = hastrait(f, Val(:addto_coeff), types...)
+has_addto_coeff(f, types::Type...) = (@nospecialize; hastrait(f, Val(:addto_coeff), types...))
 
 """
     $(@__MODULE__).has_isfiltered(f, types...) -> Bool
@@ -102,7 +102,7 @@ See also
 [`$(@__MODULE__).has_sizehint`](@ref),
 [`keeps_filtered`](@ref).
 """
-has_isfiltered(f, types::Type...) = hastrait(f, Val(:is_filtered), types...)
+has_isfiltered(f, types::Type...) = (@nospecialize; hastrait(f, Val(:is_filtered), types...))
 
 """
     $(@__MODULE__).has_sizehint(f, types...) -> Bool
@@ -117,7 +117,7 @@ See also
 [`$(@__MODULE__).has_addto`](@ref),
 [`$(@__MODULE__).has_isfiltered`](@ref),
 """
-has_sizehint(f, types::Type...) = hastrait(f, Val(:sizehint), types...)
+has_sizehint(f, types::Type...) = (@nospecialize; hastrait(f, Val(:sizehint), types...))
 
 """
     keeps_filtered(f, types...) -> Bool
@@ -132,7 +132,7 @@ The setting for `keeps_filtered` doesn't matter in this case.
 
 See also [`$(@__MODULE__).linear_filter`](@ref).
 """
-keeps_filtered(f, ::Type...) = false
+keeps_filtered(f, ::Type...) = (@nospecialize; false)
 keeps_filtered(::typeof(identity), ::Type) = true
 
 """
