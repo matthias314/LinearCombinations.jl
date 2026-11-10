@@ -661,7 +661,13 @@ or of the term `x`. If the scalar `c` is omitted, it is taken to be `1`.
 """
 function copyto!(a::AbstractLinear, b, c = ONE)
 # b can be of type AbstractLinear or some term
-    a === b ? mul!(a, c) : addmul!(zero!(a), b, c)
+    if a !== b
+        addmul!(zero!(a), b, c)
+    elseif c === ONE
+        a
+    else
+        mul!(a, c)
+    end
 end
 
 """
