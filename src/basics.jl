@@ -95,6 +95,7 @@ iszero(s::Sign) = false
 *(s::Sign, x) = isone(s) ? x : -x
 *(x, s::Sign) = s*x
 *(s::Sign, t::Sign) = Sign(xor(s.neg, t.neg))
+Base.:^(s::Sign, n::Integer) = Sign(s.neg & isodd(n))
 
 Base.inv(s::Sign) = s
 
