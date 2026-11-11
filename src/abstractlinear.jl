@@ -322,6 +322,7 @@ Multiply `a` by the scalar `c`. This functions modifies `a`.
 See also [`addmul!`](@ref).
 """
 function mul!(a::AbstractLinear, c)
+    c === ONE && return a
     for (x, d) in a
         setcoeff!(a, c*d, x)
     end
@@ -663,8 +664,6 @@ function copyto!(a::AbstractLinear, b, c = ONE)
 # b can be of type AbstractLinear or some term
     if a !== b
         addmul!(zero!(a), b, c)
-    elseif c === ONE
-        a
     else
         mul!(a, c)
     end

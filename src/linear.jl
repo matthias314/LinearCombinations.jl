@@ -98,7 +98,7 @@ end
 
 function -(a::Linear)
     if has_char2(a)
-        a
+        +a
     else
         b = copy(a)
         map!(-, values(b.ht))

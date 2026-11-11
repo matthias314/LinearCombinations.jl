@@ -422,7 +422,7 @@ function +(as::Vararg{DenseLinear,N}) where N
 end
 
 function -(a::DenseLinear{T,R}) where {T,R}
-    has_char2(R) ? a : @inbounds DenseLinear{T,R}(-a.v; basis = a.b)
+    has_char2(R) ? +a : @inbounds DenseLinear{T,R}(-a.v; basis = a.b)
 end
 
 function -(a::DenseLinear, b::DenseLinear)
