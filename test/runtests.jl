@@ -90,7 +90,7 @@ end
     @test *(s1) == s1
     @test s0*s0 == s1*s1 == s0
     @test s0*s1 == s1*s0 == s1
-    for x in (s0, s1, Int8(1), Int(2), Float32(0.25), BigInt(-1))
+    @testset for x in (s0, s1, Int8(1), Int(2), Float32(0.25), BigInt(-1))
         @test s0*x === x*s0 === x
         @test s1*x == x*s1 == -x
         @test (s0 == x) == (x == s0) == isone(x)
@@ -101,13 +101,13 @@ end
     @test hash(s0, UInt(7)) == hash(1, UInt(7))
     @test hash(s1, UInt(7)) == hash(-1, UInt(7))
 
-    for x in (Int16(1), 1, 1.0, BigFloat(1))
+    @testset for x in (Int16(1), 1, 1.0, BigFloat(1))
         @test convert(Sign, x) == s0
         @test convert(Sign, -x) == s1
         @test_throws Exception convert(Sign, 2*x)
     end
 
-    for R in (Int32, Float16, BigInt)
+    @testset for R in (Int32, Float16, BigInt)
         @test convert(R, s0) == one(R)
         @test convert(R, s1) == -one(R)
         @test promote_type(Sign, R) === R
@@ -119,13 +119,13 @@ end
     @test iszero(z) && iseven(z) && !isodd(z)
     @test z === zero(Zero) === zero(z)
     @test -z === z
-    for x in (z, Int8(-4), 10, 3.5, BigInt(2))
+    @testset for x in (z, Int8(-4), 10, 3.5, BigInt(2))
         @test z+x === x+z === x-z === x
         @test z-x == -x
         @test z*x === x*z === z
     end
 
-    for R in (Int32, Float16, BigInt)
+    @testset for R in (Int32, Float16, BigInt)
         @test convert(R, z) == zero(R)
         @test promote_type(Zero, R) === R
     end
@@ -234,7 +234,7 @@ end
 end
 
 @testset "add and sub" begin
-    for R in (Int8, Int, BigInt, Float64, BigFloat), S in (Int8, Int, BigInt, Float64, BigFloat)
+    @testset for R in (Int8, Int, BigInt, Float64, BigFloat), S in (Int8, Int, BigInt, Float64, BigFloat)
         a = Linear{Char,R}('x' => 2, 'y' => -1, 'z' => 1)
         b = Linear{Char,S}('x' => 2, 'y' => -1, 'z' => 1)
         c = @inferred(a+b)
@@ -245,7 +245,7 @@ end
         @test typeof(c) == typeof(a)
     end
 
-    for R in (Int8, Int, BigInt, Float64, BigFloat), S in (Int8, Int, BigInt, Float64, BigFloat)
+    @testset for R in (Int8, Int, BigInt, Float64, BigFloat), S in (Int8, Int, BigInt, Float64, BigFloat)
         a = Linear{Char,R}('x' => 2, 'y' => -1, 'z' => 1)
         b = Linear{Char,S}('x' => 2, 'y' => -1, 'z' => 1)
         c = @inferred(a-b)
@@ -256,7 +256,7 @@ end
         @test typeof(c) == typeof(a)
     end
 
-    for R in (Int8, Int, BigInt, Float64, BigFloat), op in (+, -)
+    @testset for R in (Int8, Int, BigInt, Float64, BigFloat), op in (+, -)
         y = 'y'
         a = Linear{Char,R}('x' => 2, y => -1, 'z' => 1)
         b = Linear{Char,R}(y => 1)
@@ -272,7 +272,7 @@ end
 end
 
 @testset "scalar mul" begin
-    for R in (Int8, Int, BigInt, Float64, BigFloat), S in (Int8, Int, BigInt, Float64, BigFloat)
+    @testset for R in (Int8, Int, BigInt, Float64, BigFloat), S in (Int8, Int, BigInt, Float64, BigFloat)
         a = Linear{Char,R}('x' => 2, 'y' => -1, 'z' => 1)
         c = 3
         b = @inferred S(c)*a
@@ -285,7 +285,7 @@ end
 end
 
 @testset "Linear mul" begin
-    for R in (Int8, Int, BigInt, Float64, BigFloat), S in (Int8, Int, BigInt, Float64, BigFloat)
+    @testset for R in (Int8, Int, BigInt, Float64, BigFloat), S in (Int8, Int, BigInt, Float64, BigFloat)
         a = Linear{String,R}("x" => 2, "y" => -1)
         b = Linear{String,S}("u" => 1, "v" => -3)
         c = Linear("xu" => 2, "xv" => -6, "yu" => -1, "yv" => 3)
@@ -294,7 +294,7 @@ end
         @test coefftype(ab) == promote_type(R, S)
     end
 
-    for R in (Int, BigFloat)
+    @testset for R in (Int, BigFloat)
         a = Linear{String,R}("x" => 2, "y" => -1)
         c = @inferred(a^8)
         @test typeof(c) == typeof(a)
@@ -305,7 +305,7 @@ end
 end
 
 @testset "broadcasting" begin
-    for R in (Int16, Float32)
+    @testset for R in (Int16, Float32)
         a = Linear{Char,R}('x' => 1)
         b = Linear{Char,R}('y' => 2)
         c = Linear{Char,R}('z' => 3)
@@ -370,7 +370,7 @@ end
     @test returns_const(@code_typed(has_isfiltered(L.f2, Some{Char})), false)
     @test returns_const(@code_typed(has_sizehint(L.f2, Some{Char})), true)
 
-    for f in [L.g1, L.g2, L.g3, L.g4]
+    @testset for f in [L.g1, L.g2, L.g3, L.g4]
         @test returns_const(@code_typed(has_coefftype(f, Char)), true)
         if f == L.g2
             @test returns_const(@code_typed(has_coefftype(f, String)), true)
@@ -409,7 +409,7 @@ end
 @testset "@linear" begin
     using .LinearTest: f, g
 
-    for R in (Int8, Int, Float64, BigFloat)
+    @testset for R in (Int8, Int, Float64, BigFloat)
         a = Linear{Char,R}('x' => 1, 'y' => 2, 'z' => 3)
         b = Linear("xx" => 1, "yy" => 2, "zz" => 3)
         c = @inferred f(a)
@@ -453,7 +453,7 @@ end
 
     h = LinearExtension(x -> x*x)
     j = LinearExtension(g)
-    for R in (Int8, Int, Float64, BigFloat)
+    @testset for R in (Int8, Int, Float64, BigFloat)
         a = Linear{Char,R}('x' => 1, 'y' => 2, 'z' => 3)
         b = Linear("xx" => 1, "yy" => 2, "zz" => 3)
         c = @inferred h(a)
@@ -487,14 +487,14 @@ end
 @testset "@multilinear" begin
     import .MultilinearTest as M
 
-    for f in [M.f, M.A(), M.B()]
+    @testset for f in [M.f, M.A(), M.B()]
         @test String == @inferred return_type(f, Char, Char)
         @test Linear{String,DefaultCoefftype} == @inferred return_type(f, Linear{Char,DefaultCoefftype}, Char)
         @test Linear{String,BigFloat} == @inferred return_type(f, Linear{Char,BigInt}, Linear1{Char,Float32})
         @test Linear1{String,Int8} == @inferred return_type(f, Char, Linear1{Char,Int8})
     end
 
-    for f in [M.g, M.C(), M.D(M.f), MultilinearExtension(M.h), MultilinearExtension(M.E())]
+    @testset for f in [M.g, M.C(), M.D(M.f), MultilinearExtension(M.h), MultilinearExtension(M.E())]
         # @test Linear1{String,DefaultCoefftype} == @inferred return_type(f, Char, Char)
         @test String == @inferred return_type(f, Char, Char)
         @test Linear{String,DefaultCoefftype} == @inferred return_type(f, Linear{Char,DefaultCoefftype}, Char)
@@ -515,7 +515,7 @@ end
     (p::P)(x) = p.s * x
     (p::P)(x, y; addto = zero(Linear{String,Int16}), coeff = ONE) = addmul!(addto, p.s * x * y, coeff*Int16(5))
 
-    for R in (Int8, BigInt, BigFloat), S in (Int8, Int32, Float64)
+    @testset for R in (Int8, BigInt, BigFloat), S in (Int8, Int32, Float64)
         x, y, u, v = "x", "y", "u", "v"
         a = Linear(P(x) => R(1), P(y) => R(2))
         b = Linear{String,S}(u => -1, v => 3)
@@ -591,7 +591,7 @@ end
 
     @test @inferred(tensor()) == Tensor()
 
-    for R in (Int8, Int, BigInt, Float64, BigFloat), S in (Int8, Int, BigInt, Float64, BigFloat)
+    @testset for R in (Int8, Int, BigInt, Float64, BigFloat), S in (Int8, Int, BigInt, Float64, BigFloat)
         a = Linear{Char,R}('x' => 1, 'y' => -2)
         b = Linear{String,S}("u" => -1, "v" => 3)
         c = @inferred tensor(a, b)
@@ -606,7 +606,7 @@ end
         @test tensor(a, b; addto = cc, coeff = -3) == -2*c
     end
 
-    for n in 1:8
+    @testset for n in 1:8
         a = @inferred tensor(['a'+k for k in 1:n]...)
         @test a isa Tensor{NTuple{n,Char}}
         a = @inferred tensor([Linear1('a'+k => 2) for k in 1:n]...)
@@ -615,12 +615,12 @@ end
         @test a isa Linear{Tensor{NTuple{n,Char}},Float64}
     end
 
-    for t in (Tensor(), Tensor('x'), Tensor('x', 'y', 'z'))
+    @testset for t in (Tensor(), Tensor('x'), Tensor('x', 'y', 'z'))
         @test @inferred(deg(t)) === Zero()
     end
 
     a = Linear('x' => 1, 'y' => -1)
-    for n in 1:8
+    @testset for n in 1:8
         t = Tuple(a for _ in 1:n)
         c = @inferred tensor(t...)
         @test length(c) == 2^n
@@ -640,7 +640,7 @@ end
 
 @testset "Tensor deg" begin
     degs = (Zero(), 1, BigInt(2))
-    for k1 in degs, k2 in degs, k3 in degs
+    @testset for k1 in degs, k2 in degs, k3 in degs
         t = Tensor(Graded('x', k1), Graded('y', k2), Graded('z', k3))
         @test @inferred(deg(t)) == k1+k2+k3
     end
@@ -676,7 +676,7 @@ end
 
     degs = (Zero(), 1, 2)
 
-    for m1 in degs, m2 in degs, n1 in degs, n2 in degs
+    @testset for m1 in degs, m2 in degs, n1 in degs, n2 in degs
         h = Tensor(Graded(identity, m1), Graded(identity, m2))
         t = Tensor(Graded('x', n1), Graded('y', n2))
         b = @inferred h(t)
@@ -697,7 +697,7 @@ end
         @test coefftype(b) == Float64
     end
 
-    for m1 in degs, m2 in degs, n1 in degs, n2 in degs, o1 in degs, o2 in degs
+    @testset for m1 in degs, m2 in degs, n1 in degs, n2 in degs, o1 in degs, o2 in degs
         h = Tensor(Graded(*, m1), Graded(*, m2))
         t = Tensor(Graded('x', n1), Graded('y', n2))
         t2 = Tensor(Graded('p', o1), Graded('q', o2))
@@ -788,7 +788,7 @@ end
 @testset "regroup tensor sign" begin
     degs = (Zero(), 1, 2)
 
-    for k1 in degs, k2 in degs
+    @testset for k1 in degs, k2 in degs
         t = Tensor(Graded('x', k1), Graded('y', k2))
         a = @inferred swap(t)
         se = k1*k2
@@ -803,7 +803,7 @@ end
     end
 
     rg = regroup(:(1,2,3), :(3,2,1))
-    for k1 in degs, k2 in degs, k3 in degs
+    @testset for k1 in degs, k2 in degs, k3 in degs
         t = Tensor(Graded('x', k1), Graded('y', k2), Graded('z', k3))
         a = @inferred rg(t)
         se = k3*(k1+k2) + k2*k1
@@ -841,7 +841,7 @@ LinearCombinations.keeps_filtered(::typeof(diff), ::Type{ErrorFilter{Char}}) = t
     @test f(x) |> Returns(true)
     @test_throws FilterException g(x)
     @test g(x; is_filtered = true) |> Returns(true)
-    for L in (Linear, Linear1)
+    @testset for L in (Linear, Linear1)
         a = L(x => 1; is_filtered = true)
         @test_throws FilterException f(a)
         @test KeepsFiltered(f)(a) |> Returns(true)
@@ -851,9 +851,9 @@ LinearCombinations.keeps_filtered(::typeof(diff), ::Type{ErrorFilter{Char}}) = t
     # multilinear
     using ..MultilinearTest: f as ff
     @test (ff(x, x); true)
-    for L in (Linear, Linear1)
+    @testset for L in (Linear, Linear1)
         a = L(x => 1; is_filtered = true)
-        for (p, q) in [('x', a), (a, 'x'), (a, a)]
+        @testset for (p, q) in [('x', a), (a, 'x'), (a, a)]
             @test_throws FilterException ff(p, q)
             @test KeepsFiltered(ff)(p, q; is_filtered = true) |> Returns(true)
         end
@@ -887,7 +887,7 @@ LinearCombinations.keeps_filtered(::typeof(diff), ::Type{ErrorFilter{Char}}) = t
     @test LinearComposedFunction(f, KeepsFiltered(ff))(x, x) |> Returns(true)
     @test LinearComposedFunction(KeepsFiltered(f), KeepsFiltered(ff))(x, x) |> Returns(true)
 
-    for (p, q) in [('x', a), (a, 'x'), (a, a)]
+    @testset for (p, q) in [('x', a), (a, 'x'), (a, a)]
         @test_throws FilterException LinearComposedFunction(f, ff)(p, q; is_filtered = true)
         @test_throws FilterException LinearComposedFunction(KeepsFiltered(f), ff)(p, q; is_filtered = true)
         @test_throws FilterException LinearComposedFunction(f, KeepsFiltered(ff))(p, q; is_filtered = true)
@@ -1051,7 +1051,7 @@ end
     @test dx isa Linear{Tensor{NTuple{3,GradedString}},Float64}
     @test dx == -2*diff(x)
 
-    for n in 0:8
+    @testset for n in 0:8
         a = tensor((GradedString(string(x)) for x in 'a':'a'+n-1)...)
         b = @inferred diff(a)
         @test iszero(diff(diff(b)))
