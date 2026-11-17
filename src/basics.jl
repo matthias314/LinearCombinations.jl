@@ -92,6 +92,7 @@ iszero(s::Sign) = false
 
 +(s::Sign) = s
 -(s::Sign) = Sign(!s.neg)
+*(s::Sign) = s
 *(s::Sign, x) = isone(s) ? x : -x
 *(x, s::Sign) = s*x
 *(s::Sign, t::Sign) = Sign(xor(s.neg, t.neg))

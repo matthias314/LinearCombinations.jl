@@ -86,6 +86,8 @@ end
     @test s0 === one(Sign) === one(s1)
     @test +s0 == -s1 == s0
     @test +s1 == -s0 == s1
+    @test *(s0) == s0
+    @test *(s1) == s1
     @test s0*s0 == s1*s1 == s0
     @test s0*s1 == s1*s0 == s1
     for x in (s0, s1, Int8(1), Int(2), Float32(0.25), BigInt(-1))
